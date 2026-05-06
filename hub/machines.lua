@@ -157,9 +157,27 @@ end
 -- @param m  table  Запись машины из registry
 -- @return ok bool, msg string
 function machines.restart(m)
+  local proxy
+  if m.adapter_addr then
+    proxy = component.proxy(m.adapter_addr)
+  end
+
+  -- Software API restart
+  if proxy and proxy.setWorkAllowed then
+    local ok, err = pcall(function()
+      proxy.setWorkAllowed(false)
+      os.sleep(0.5)
+      proxy.setWorkAllowed(true)
+    end)
+    if ok then
+      return true, "Restarted via API (setWorkAllowed)"
+    end
+  end
+
+  -- Hardware Redstone restart
   local r = m.redstone
   if not r or not r.addr or r.side == nil then
-    return false, "No redstone configured for this machine"
+    return false, "No redstone config and API restart failed/unavailable"
   end
   local rs = rsProxy(r.addr)
   if not rs then
