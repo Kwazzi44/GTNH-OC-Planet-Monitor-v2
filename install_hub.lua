@@ -1,115 +1,75 @@
 -- =============================================================================
 -- install_hub.lua — Hub Installer
 -- =============================================================================
--- Запуск на Hub-компьютере:
---   wget -q https://raw.githubusercontent.com/ТВОЙ_НИК/GTNH-OC-Planet-Monitor/main/install_hub.lua /tmp/install_hub.lua
---   lua /tmp/install_hub.lua
---
--- Требует: Internet Card в компьютере
+-- Запуск на Hub-компьютере (нужна Internet Card):
+--   wget -q https://raw.githubusercontent.com/ТВОЙ_НИК/GTNH-OC-Planet-Monitor/main/install_hub.lua /tmp/ih.lua
+--   lua /tmp/ih.lua
 
--- ─── НАСТРОЙКА ────────────────────────────────────────────────────────────
--- Замени на свой GitHub username и название репозитория:
-local REPO = "https://raw.githubusercontent.com/Kwazzi44/GTNH-OC-Planet-Monitor/main"
-
--- Куда устанавливать файлы (корень файловой системы OC):
-local INSTALL_DIR = "/"
--- ──────────────────────────────────────────────────────────────────────────
+local REPO = "https://raw.githubusercontent.com/ТВОЙ_НИК/GTNH-OC-Planet-Monitor/main"
 
 local component  = require("component")
 local filesystem = require("filesystem")
 local internet   = require("internet")
 
--- ─── Проверки ─────────────────────────────────────────────────────────────
-
 if not component.isAvailable("internet") then
-  io.write("[ERROR] Internet Card not found! Insert it and try again.\n")
-  os.exit(1)
+  io.write("[ERROR] Internet Card not found!\n"); os.exit(1)
 end
 
--- ─── Файлы для скачивания ─────────────────────────────────────────────────
--- { url_path, local_path }
-
 local FILES = {
-  { "/protocol.lua",      "/protocol.lua"      },
-  { "/hub/config.lua",    "/hub/config.lua"    },
-  { "/hub/logger.lua",    "/hub/logger.lua"    },
-  { "/hub/registry.lua",  "/hub/registry.lua"  },
-  { "/hub/monitor.lua",   "/hub/monitor.lua"   },
-  { "/hub/gui.lua",       "/hub/gui.lua"       },
-  { "/hub/main.lua",      "/hub/main.lua"      },
+  { "/hub/config.lua",   "/hub/config.lua"   },
+  { "/hub/logger.lua",   "/hub/logger.lua"   },
+  { "/hub/registry.lua", "/hub/registry.lua" },
+  { "/hub/machines.lua", "/hub/machines.lua" },
+  { "/hub/gui.lua",      "/hub/gui.lua"      },
+  { "/hub/setup.lua",    "/hub/setup.lua"    },
+  { "/hub/main.lua",     "/hub/main.lua"     },
 }
 
--- ─── Утилиты ──────────────────────────────────────────────────────────────
-
-local function mkdirs(path)
-  local dir = filesystem.path(path)
+local function mkdirs(dest)
+  local dir = filesystem.path(dest)
   if dir and dir ~= "/" and not filesystem.exists(dir) then
     filesystem.makeDirectory(dir)
   end
 end
 
 local function download(url, dest)
-  mkdirs(INSTALL_DIR .. dest)
-  local full_dest = INSTALL_DIR .. dest:gsub("^/", "")
+  mkdirs(dest)
   local ok, err = pcall(function()
-    local response = internet.request(url)
-    local f = io.open(full_dest, "w")
-    if not f then error("Cannot open file: " .. full_dest) end
-    for chunk in response do
-      f:write(chunk)
-    end
+    local resp = internet.request(url)
+    local f = assert(io.open(dest, "w"))
+    for chunk in resp do f:write(chunk) end
     f:close()
   end)
   return ok, err
 end
 
--- ─── Установка ────────────────────────────────────────────────────────────
-
-io.write("\n")
-io.write("===========================================\n")
+io.write("\n===========================================\n")
 io.write("  GTNH Planet Monitor — HUB INSTALLER     \n")
-io.write("===========================================\n")
-io.write("Repository: " .. REPO .. "\n\n")
+io.write("===========================================\n\n")
 
-local success = 0
-local failed  = 0
-
-for _, entry in ipairs(FILES) do
-  local url_path, dest = entry[1], entry[2]
-  local url = REPO .. url_path
-  io.write(string.format("  [..] %-35s", dest))
-  local ok, err = download(url, dest)
+local ok_n, fail_n = 0, 0
+for _, e in ipairs(FILES) do
+  io.write(string.format("  [..] %-30s", e[2]))
+  local ok, err = download(REPO .. e[1], e[2])
   if ok then
-    io.write("\r  [OK] " .. dest .. "\n")
-    success = success + 1
+    io.write("\r  [OK] " .. e[2] .. "\n"); ok_n = ok_n + 1
   else
-    io.write("\r  [!!] " .. dest .. " — FAILED\n")
-    io.write("       " .. tostring(err) .. "\n")
-    failed = failed + 1
+    io.write("\r  [!!] " .. e[2] .. "\n")
+    io.write("       " .. tostring(err) .. "\n"); fail_n = fail_n + 1
   end
 end
 
-io.write("\n")
-io.write("-------------------------------------------\n")
-io.write(string.format("  Done: %d OK, %d FAILED\n", success, failed))
-io.write("-------------------------------------------\n")
+io.write(string.format("\nDone: %d OK, %d FAILED\n", ok_n, fail_n))
 
-if failed == 0 then
-  -- Создать autorun для Hub
-  io.write("\nCreate /home/autorun.lua to auto-start on boot? [y/n]: ")
-  local ans = io.read()
-  if ans and (ans:lower() == "y" or ans:lower() == "yes") then
+if fail_n == 0 then
+  io.write("\nCreate /home/autorun.lua? [y/n]: ")
+  local a = io.read()
+  if a and a:lower() == "y" then
     local f = io.open("/home/autorun.lua", "w")
-    if f then
-      f:write('-- Hub auto-start\n')
-      f:write('shell.execute("/hub/main.lua")\n')
-      f:close()
-      io.write("[OK] /home/autorun.lua created.\n")
-    end
+    if f then f:write('shell.execute("/hub/main.lua")\n'); f:close() end
+    io.write("[OK] autorun created.\n")
   end
-
   io.write("\nInstallation complete!\n")
-  io.write("Run:  lua /hub/main.lua\n\n")
-else
-  io.write("\n[WARN] Some files failed. Check your internet connection and REPO URL.\n\n")
+  io.write("First run setup: lua /hub/setup.lua\n")
+  io.write("Then start hub:  lua /hub/main.lua\n\n")
 end

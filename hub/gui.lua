@@ -203,6 +203,7 @@ function gui.drawPlanetList(planets, sel, scroll)
     {"A",     "RestartAll"},
     {"R",     "Refresh"},
     {"L",     "Log"},
+    {"S",     "Setup"},
     {"Q",     "Quit"},
   })
 end

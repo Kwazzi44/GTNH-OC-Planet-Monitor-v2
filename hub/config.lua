@@ -1,21 +1,12 @@
 -- =============================================================================
--- hub/config.lua — Hub Configuration
+-- hub/config.lua
 -- =============================================================================
-
 local config = {}
 
--- ─── Сеть ────────────────────────────────────────────────────────────────
-config.modem_port    = 42     -- Порт для всех OC-сообщений (должен совпадать с protocol.PORT)
-
--- ─── Таймауты и интервалы ────────────────────────────────────────────────
-config.ping_interval = 10     -- Секунды между автоматическими PING-ами всех планет
-config.ping_timeout  = 8      -- Секунды ожидания PONG перед установкой RING_DOWN
-config.gui_refresh   = 0.5    -- Частота перерисовки GUI (секунды)
-
--- ─── Файлы ───────────────────────────────────────────────────────────────
--- Пути относительно домашней директории OC (/home/) или абсолютные
-config.registry_file = "/hub_registry.json"
-config.log_file      = "/hub_eventlog.txt"
-config.log_max_lines = 500    -- Максимум строк в логе (ротация)
+config.poll_interval = 10    -- Секунды между опросами машин
+config.gui_refresh   = 0.5   -- Частота перерисовки GUI
+config.registry_file = "/planet_registry.json"
+config.log_file      = "/planet_log.txt"
+config.log_max_lines = 500
 
 return config

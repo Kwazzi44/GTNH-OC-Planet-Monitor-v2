@@ -1,48 +1,92 @@
 -- =============================================================================
--- hub/main.lua — Hub Entry Point & Main Loop
+-- hub/main.lua — Entry Point: Polling Loop + GUI
 -- =============================================================================
--- Запуск: поместите файлы hub/ на компьютер Hub, protocol.lua рядом или в /lib/
--- Затем: lua /path/to/hub/main.lua
 
 local scriptPath = (debug and debug.getinfo and
   debug.getinfo(1,"S").source:match("^@(.+/)")) or ""
--- Добавляем директорию hub/ и корень проекта в путь
-package.path = scriptPath .. "?.lua;"
-           .. scriptPath .. "../?.lua;"
-           .. package.path
+package.path = scriptPath .. "?.lua;" .. package.path
 
 local component = require("component")
 local event     = require("event")
 local os        = require("os")
-local keyboard  = require("keyboard")
 
 local config   = require("config")
-local protocol = require("protocol")
 local registry = require("registry")
-local monitor  = require("monitor")
+local mch      = require("machines")
 local logger   = require("logger")
 local gui      = require("gui")
 
 -- ─── UI State ─────────────────────────────────────────────────────────────
 
-local VIEW = { PLANETS = "planets", DETAIL = "detail", LOG = "log" }
+local VIEW = { PLANETS = 1, DETAIL = 2, LOG = 3 }
 
-local uiState = {
-  view         = VIEW.PLANETS,
-  planet_sel   = 1,
-  planet_scroll= 1,
-  machine_sel  = 1,
+local ui = {
+  view          = VIEW.PLANETS,
+  planet_sel    = 1,
+  planet_scroll = 1,
+  machine_sel   = 1,
   machine_scroll= 1,
-  log_scroll   = nil,   -- nil = auto-bottom
-  detail_addr  = nil,   -- modem address of planet in detail view
-  dirty        = true,
-  notify       = nil,   -- { msg, color, until_clock }
-  last_draw    = 0,
+  log_scroll    = nil,
+  detail_planet = nil,   -- имя планеты в detail-view
+  dirty         = true,
+  notify        = nil,   -- { msg, color, until_t }
+  last_draw     = 0,
 }
 
-local _running = true
+local _running    = true
+local _last_poll  = 0
 
--- ─── Helper: navigate list ────────────────────────────────────────────────
+-- ─── Polling ──────────────────────────────────────────────────────────────
+
+local function pollAll()
+  for pname, planet in pairs(registry.getAll()) do
+    local all_missing = (#planet.machines > 0)
+    local any_offline = false
+    local prev_status = planet.status
+
+    for _, m in ipairs(planet.machines) do
+      local prev_active = m.active
+      local active, err = mch.getStatus(m)
+      m.active = active
+      m.error  = err
+
+      if not err then
+        all_missing = false   -- хотя бы один адаптер жив
+      end
+      if not active then
+        any_offline = true
+      end
+
+      -- Лог изменений статуса машины
+      if prev_active ~= active then
+        logger.log(pname, m.name, active and "ACTIVE" or "OFFLINE")
+      end
+    end
+
+    -- Вычислить статус планеты
+    local new_status
+    if #planet.machines == 0 then
+      new_status = "UNKNOWN"
+    elseif all_missing then
+      new_status = "RING_DOWN"
+    elseif any_offline then
+      new_status = "PARTIAL"
+    else
+      new_status = "OK"
+      planet.last_ok = os.time()
+    end
+
+    if prev_status ~= new_status then
+      planet.status = new_status
+      logger.log(pname, nil, prev_status .. " -> " .. new_status)
+    end
+  end
+
+  registry.save()
+  ui.dirty = true
+end
+
+-- ─── Helpers ──────────────────────────────────────────────────────────────
 
 local function clamp(v, lo, hi) return math.max(lo, math.min(hi, v)) end
 
@@ -53,248 +97,206 @@ local function navigate(sel, scroll, delta, count, visible)
   return sel, scroll
 end
 
--- ─── Notify helper ────────────────────────────────────────────────────────
-
 local function setNotify(msg, color)
-  uiState.notify = { msg = msg, color = color, until_t = os.clock() + 3 }
-  uiState.dirty  = true
+  ui.notify = { msg = msg, color = color or 0xFFAA00, until_t = os.clock() + 3 }
+  ui.dirty  = true
 end
 
--- ─── View transitions ─────────────────────────────────────────────────────
-
-local function openDetail(planets)
-  if #planets == 0 then return end
-  local p = planets[uiState.planet_sel]
-  if not p then return end
-  uiState.detail_addr   = p.address
-  uiState.machine_sel   = 1
-  uiState.machine_scroll= 1
-  uiState.view          = VIEW.DETAIL
-  uiState.dirty         = true
-end
-
-local function openLog()
-  uiState.log_scroll = nil  -- auto-bottom
-  uiState.view       = VIEW.LOG
-  uiState.dirty      = true
-end
-
-local function goBack()
-  uiState.view  = VIEW.PLANETS
-  uiState.dirty = true
-end
+local LIST_H = 15  -- приблизительно, gui.lua уточняет
 
 -- ─── Actions ──────────────────────────────────────────────────────────────
 
 local function doRestartMachine()
-  if uiState.view ~= VIEW.DETAIL then return end
-  local p = registry.get(uiState.detail_addr)
+  local p = registry.get(ui.detail_planet)
   if not p then return end
   if p.status == "RING_DOWN" then
-    setNotify("Ring is offline! Cannot restart remotely.", 0xFF2244)
-    return
+    setNotify("Ring DOWN! Cannot restart.", 0xFF2244); return
   end
-  local machines = p.machines or {}
-  local m = machines[uiState.machine_sel]
+  local m = (p.machines or {})[ui.machine_sel]
   if not m then return end
-  if m.active then
-    setNotify(m.name .. " is already ACTIVE.", 0x00DD55)
-    return
-  end
-  -- Передаём имя машины — Node ищет его в redstone_restart
-  monitor.restartMachine(p.address, m.name)
-  setNotify("Restart sent for: " .. m.name, 0xFFAA00)
+  if m.active then setNotify(m.name .. " already ACTIVE", 0x00DD55); return end
+  local ok, msg = mch.restart(m)
+  logger.log(p.name, m.name, "RESTART -> " .. (ok and "OK: " or "FAIL: ") .. msg)
+  setNotify((ok and "[OK] " or "[FAIL] ") .. msg, ok and 0x00DD55 or 0xFF2244)
 end
 
 local function doRestartAll()
+  local pname = (ui.view == VIEW.DETAIL) and ui.detail_planet
+    or (registry.getPlanetList()[ui.planet_sel] or {}).name
+  if not pname then return end
+  local p = registry.get(pname)
+  if not p then return end
+  if p.status == "RING_DOWN" then setNotify("Ring DOWN!", 0xFF2244); return end
+  local count = 0
+  for _, m in ipairs(p.machines or {}) do
+    if not m.active then
+      local ok, msg = mch.restart(m)
+      logger.log(pname, m.name, "RESTART -> " .. (ok and "OK" or "FAIL: "..msg))
+      if ok then count = count + 1 end
+    end
+  end
+  setNotify(string.format("Restart ALL: %d sent", count))
+end
+
+local function openDetail()
   local planets = registry.getPlanetList()
-  if uiState.view == VIEW.DETAIL then
-    local p = registry.get(uiState.detail_addr)
-    if p and p.status ~= "RING_DOWN" then
-      monitor.restartAll(p.address)
-      setNotify("Restart ALL sent to " .. p.planet, 0xFFAA00)
-    else
-      setNotify("Ring is offline! Cannot restart remotely.", 0xFF2244)
-    end
-  elseif uiState.view == VIEW.PLANETS then
-    local p = planets[uiState.planet_sel]
-    if p and p.status ~= "RING_DOWN" then
-      monitor.restartAll(p.address)
-      setNotify("Restart ALL sent to " .. p.planet, 0xFFAA00)
-    end
+  local p = planets[ui.planet_sel]
+  if not p then return end
+  ui.detail_planet  = p.name
+  ui.machine_sel    = 1
+  ui.machine_scroll = 1
+  ui.view           = VIEW.DETAIL
+  ui.dirty          = true
+end
+
+local function runSetup()
+  -- Запускаем setup.lua поверх
+  if component.isAvailable("gpu") then
+    local gpu = component.gpu
+    gpu.setBackground(0x000000); gpu.setForeground(0xFFFFFF)
+    local w,h = gpu.getResolution()
+    gpu.fill(1,1,w,h," ")
   end
+  local shell = require("shell")
+  shell.execute(scriptPath .. "setup.lua")
+  registry.load()   -- перезагрузить после настройки
+  ui.dirty = true
 end
 
-local function doScan()
-  if uiState.view ~= VIEW.DETAIL then return end
-  local p = registry.get(uiState.detail_addr)
-  if p then
-    monitor.scanPlanet(p.address)
-    setNotify("Scan request sent to " .. p.planet, 0x4477FF)
-  end
-end
-
-local function doRefresh()
-  monitor.pingAll()
-  setNotify("Refresh: pinged all planets", 0x4477FF)
-end
-
--- ─── Keyboard handler ─────────────────────────────────────────────────────
+-- ─── Keyboard ─────────────────────────────────────────────────────────────
 
 local function onKey(_, _, char, code)
-  local _, W_gui = gui.getSize and gui.getSize() or (80, 25)
-  local _, H_gui = gui.getSize()
-  -- Visible rows для списков (приблизительно)
-  local LIST_VISIBLE = H_gui - 7
+  local q_char  = string.byte("q")
+  local Q_char  = string.byte("Q")
+  local b_char  = string.byte("b")
+  local B_char  = string.byte("B")
+  local l_char  = string.byte("l")
+  local L_char  = string.byte("L")
+  local r_char  = string.byte("r")
+  local R_char  = string.byte("R")
+  local a_char  = string.byte("a")
+  local A_char  = string.byte("A")
+  local s_char  = string.byte("s")
+  local S_char  = string.byte("S")
 
-  -- Q / ESC → quit
-  if char == string.byte("q") or char == string.byte("Q") or code == 1 then
-    _running = false
-    return
+  -- Q → выход
+  if char == q_char or char == Q_char or code == 1 then
+    _running = false; return
   end
-
-  -- B → back
-  if char == string.byte("b") or char == string.byte("B") then
-    if uiState.view ~= VIEW.PLANETS then goBack() end
-    return
+  -- B → назад
+  if char == b_char or char == B_char then
+    ui.view = VIEW.PLANETS; ui.dirty = true; return
   end
-
-  -- L → log view
-  if char == string.byte("l") or char == string.byte("L") then
-    if uiState.view ~= VIEW.LOG then openLog() end
-    return
+  -- L → лог
+  if char == l_char or char == L_char then
+    ui.log_scroll = nil; ui.view = VIEW.LOG; ui.dirty = true; return
   end
-
-  -- R → refresh all
-  if char == string.byte("r") or char == string.byte("R") then
-    doRefresh()
-    uiState.dirty = true
-    return
+  -- R → poll сейчас
+  if char == r_char or char == R_char then
+    pollAll(); setNotify("Refreshed", 0x4477FF); return
   end
-
   -- A → restart all
-  if char == string.byte("a") or char == string.byte("A") then
-    doRestartAll()
-    return
+  if char == a_char or char == A_char then
+    doRestartAll(); return
   end
-
-  -- S → scan (detail view)
-  if char == string.byte("s") or char == string.byte("S") then
-    doScan()
-    return
+  -- S → setup (только из главного экрана)
+  if (char == s_char or char == S_char) and ui.view == VIEW.PLANETS then
+    runSetup(); return
   end
-
   -- ENTER
   if code == 28 then
-    if uiState.view == VIEW.PLANETS then
-      openDetail(registry.getPlanetList())
-    elseif uiState.view == VIEW.DETAIL then
-      doRestartMachine()
-    elseif uiState.view == VIEW.LOG then
-      -- nothing
+    if ui.view == VIEW.PLANETS then openDetail()
+    elseif ui.view == VIEW.DETAIL then doRestartMachine()
     end
     return
   end
 
-  -- Navigation
-  local UP   = (code == 200)  -- arrow up
-  local DOWN = (code == 208)  -- arrow down
+  -- Навигация
+  local UP   = (code == 200)
+  local DOWN = (code == 208)
   local HOME = (code == 199)
   local ENDK = (code == 207)
 
-  if uiState.view == VIEW.PLANETS then
-    if UP or DOWN then
-      local planets = registry.getPlanetList()
-      uiState.planet_sel, uiState.planet_scroll =
-        navigate(uiState.planet_sel, uiState.planet_scroll,
-                 UP and -1 or 1, #planets, LIST_VISIBLE)
-      uiState.dirty = true
-    end
+  if ui.view == VIEW.PLANETS and (UP or DOWN) then
+    local planets = registry.getPlanetList()
+    ui.planet_sel, ui.planet_scroll =
+      navigate(ui.planet_sel, ui.planet_scroll, UP and -1 or 1, #planets, LIST_H)
+    ui.dirty = true
 
-  elseif uiState.view == VIEW.DETAIL then
-    if UP or DOWN then
-      local p = registry.get(uiState.detail_addr)
-      local count = p and #(p.machines or {}) or 0
-      uiState.machine_sel, uiState.machine_scroll =
-        navigate(uiState.machine_sel, uiState.machine_scroll,
-                 UP and -1 or 1, count, LIST_VISIBLE)
-      uiState.dirty = true
-    end
+  elseif ui.view == VIEW.DETAIL and (UP or DOWN) then
+    local p = registry.get(ui.detail_planet)
+    local cnt = p and #(p.machines or {}) or 0
+    ui.machine_sel, ui.machine_scroll =
+      navigate(ui.machine_sel, ui.machine_scroll, UP and -1 or 1, cnt, LIST_H)
+    ui.dirty = true
 
-  elseif uiState.view == VIEW.LOG then
+  elseif ui.view == VIEW.LOG then
     local lines = logger.getLines()
-    local count = #lines
-    local _, H2 = gui.getSize()
-    local lh = H2 - 5
-    if UP   then uiState.log_scroll = math.max(1, (uiState.log_scroll or count) - 1) end
-    if DOWN then uiState.log_scroll = math.min(count, (uiState.log_scroll or count) + 1) end
-    if HOME then uiState.log_scroll = 1 end
-    if ENDK then uiState.log_scroll = nil end
-    uiState.dirty = true
+    local cnt   = #lines
+    if UP   then ui.log_scroll = math.max(1, (ui.log_scroll or cnt) - 1) end
+    if DOWN then ui.log_scroll = math.min(cnt, (ui.log_scroll or cnt) + 1) end
+    if HOME then ui.log_scroll = 1 end
+    if ENDK then ui.log_scroll = nil end
+    ui.dirty = true
   end
 end
 
--- ─── Modem message handler ────────────────────────────────────────────────
-
-local function onModem(_, _, sender, port, _, raw)
-  if port ~= config.modem_port then return end
-  monitor.handleMessage(sender, raw)
-  uiState.dirty = true
-end
-
--- ─── Draw frame ───────────────────────────────────────────────────────────
+-- ─── Draw ─────────────────────────────────────────────────────────────────
 
 local function draw()
   local planets = registry.getPlanetList()
 
-  if uiState.view == VIEW.PLANETS then
-    gui.drawPlanetList(planets, uiState.planet_sel, uiState.planet_scroll)
-
-  elseif uiState.view == VIEW.DETAIL then
-    local p = registry.get(uiState.detail_addr)
+  if ui.view == VIEW.PLANETS then
+    gui.drawPlanetList(planets, ui.planet_sel, ui.planet_scroll)
+  elseif ui.view == VIEW.DETAIL then
+    local p = registry.get(ui.detail_planet)
     if p then
-      gui.drawPlanetDetail(p, uiState.machine_sel, uiState.machine_scroll)
+      gui.drawPlanetDetail(p, ui.machine_sel, ui.machine_scroll)
     else
-      goBack()
+      ui.view = VIEW.PLANETS
     end
-
-  elseif uiState.view == VIEW.LOG then
-    gui.drawLog(logger.getLines(), uiState.log_scroll)
+  elseif ui.view == VIEW.LOG then
+    gui.drawLog(logger.getLines(), ui.log_scroll)
   end
 
-  -- Notify overlay
-  if uiState.notify then
-    if os.clock() < uiState.notify.until_t then
-      gui.notify(uiState.notify.msg, uiState.notify.color)
+  if ui.notify then
+    if os.clock() < ui.notify.until_t then
+      gui.notify(ui.notify.msg, ui.notify.color)
     else
-      uiState.notify = nil
-      uiState.dirty  = true
+      ui.notify = nil; ui.dirty = true
     end
   end
 
-  uiState.dirty    = false
-  uiState.last_draw = os.clock()
+  ui.dirty    = false
+  ui.last_draw = os.clock()
 end
 
 -- ─── Init ────────────────────────────────────────────────────────────────
 
 local function init()
   if not gui.init() then
-    io.write("[ERROR] No GPU/Screen found.\n")
-    return false
+    io.write("[ERROR] No GPU/Screen.\n"); return false
   end
-
-  local ok, err = monitor.init()
-  if not ok then
-    io.write("[ERROR] " .. (err or "Monitor init failed") .. "\n")
-    return false
-  end
-
   registry.load()
   logger.load()
 
-  -- Запросить регистрацию у всех уже запущенных Node'ов
-  monitor.broadcastRegister()
+  local planets = registry.getPlanetList()
+  if #planets == 0 then
+    -- Нет планет — запустить setup
+    io.write("[INFO] No planets configured. Running setup...\n")
+    os.sleep(1)
+    runSetup()
+    planets = registry.getPlanetList()
+    if #planets == 0 then
+      io.write("[WARN] Still no planets. Add machines via setup.\n")
+    end
+  end
+
+  -- Сбросить все редстоун-выходы
+  mch.resetAllRedstone(planets)
+
+  -- Первый опрос
+  pollAll()
 
   return true
 end
@@ -302,50 +304,42 @@ end
 -- ─── Main Loop ────────────────────────────────────────────────────────────
 
 local function mainLoop()
-  local keyListener   = event.listen("key_down",      onKey)
-  local modemListener = event.listen("modem_message",  onModem)
+  local keyListen = event.listen("key_down", onKey)
 
   while _running do
     local now = os.clock()
 
-    -- Авто-пинг
-    if monitor.shouldAutoPing() then
-      monitor.pingAll()
+    -- Автополлинг
+    if (now - _last_poll) >= config.poll_interval then
+      pollAll()
+      _last_poll = now
     end
-
-    -- Проверка таймаутов (Ring Down)
-    monitor.checkTimeouts()
 
     -- Перерисовка
-    if uiState.dirty or (now - uiState.last_draw >= config.gui_refresh) then
+    if ui.dirty or (now - ui.last_draw) >= config.gui_refresh then
       draw()
     end
-
-    -- Периодическое сохранение реестра
-    registry.flush()
 
     os.sleep(0.05)
   end
 
-  event.ignore("key_down",     keyListener)
-  event.ignore("modem_message", modemListener)
+  event.ignore("key_down", keyListen)
 
-  -- Восстановить экран
+  -- Восстановить терминал
   if component.isAvailable("gpu") then
     local gpu = component.gpu
-    gpu.setBackground(0x000000)
-    gpu.setForeground(0xFFFFFF)
-    local gw, gh = gpu.getResolution()
-    gpu.fill(1, 1, gw, gh, " ")
+    gpu.setBackground(0x000000); gpu.setForeground(0xFFFFFF)
+    local w, h = gpu.getResolution()
+    gpu.fill(1, 1, w, h, " ")
     gpu.set(1, 1, "Planet Monitor stopped.")
   end
 end
 
--- ─── Entry Point ──────────────────────────────────────────────────────────
+-- ─── Entry ────────────────────────────────────────────────────────────────
 
 if init() then
   mainLoop()
 else
-  print("Initialization failed.")
+  io.write("Init failed.\n")
   os.exit(1)
 end
