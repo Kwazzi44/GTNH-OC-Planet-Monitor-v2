@@ -37,8 +37,9 @@ end
 
 local function download(url, dest)
   mkdirs(dest)
+  local bust = "?v=" .. tostring(math.floor(os.time()))
   local ok, err = pcall(function()
-    local resp = internet.request(url)
+    local resp = internet.request(url .. bust)
     local f = assert(io.open(dest, "w"))
     for chunk in resp do f:write(chunk) end
     f:close()
