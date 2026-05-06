@@ -215,19 +215,11 @@ end
 -- @param sel      number  Индекс выбранной машины
 -- @param scroll   number  Первая видимая машина
 function gui.drawPlanetDetail(planet, sel, scroll)
-  -- DEBUG: print field types to stderr
-  io.write("[DBG] planet type=" .. type(planet) .. "\n")
-  if planet then
-    io.write("[DBG]  .name   type=" .. type(planet.name)   .. " val=" .. tostring(planet.name)   .. "\n")
-    io.write("[DBG]  .status type=" .. type(planet.status) .. " val=" .. tostring(planet.status) .. "\n")
-  end
   local st    = planet.status or "UNKNOWN"
   local scol  = STATUS_COLOR[st] or C.unknown
-  io.write("[DBG]  st=" .. type(st) .. ":" .. tostring(st) .. " label=" .. type(STATUS_LABEL[st]) .. ":" .. tostring(STATUS_LABEL[st]) .. "\n")
 
   local h1 = tostring(planet.name or "?") .. "  [" .. tostring(STATUS_LABEL[st] or st) .. "]"
   local h2 = "Last seen: " .. timeAgo(planet.last_ok)
-  io.write("[DBG]  h1=" .. h1 .. "\n")
   g_fill(1, 1, W, H, " ", C.text, C.bg)
   drawHeader(h1, h2)
 
@@ -295,8 +287,8 @@ function gui.drawPlanetDetail(planet, sel, scroll)
     {"Up/Dn", "Navigate"},
     {"Enter", "Restart"},
     {"A",     "RestartAll"},
-    {"S",     "Scan"},
     {"B",     "Back"},
+    {"Q",     "Quit"},
   })
 end
 
