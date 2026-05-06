@@ -7,6 +7,7 @@ package.path = "/home/hub/?.lua;" .. package.path
 local component = require("component")
 local event     = require("event")
 local os        = require("os")
+local computer  = require("computer")
 
 local config   = require("config")
 local registry = require("registry")
@@ -368,7 +369,7 @@ local function mainLoop()
   local touchListen = event.listen("touch", safeOnTouch)
 
   while _running do
-    local now = os.clock()
+    local now = computer.uptime()
 
     local ok, err = pcall(function()
       -- Автополлинг сети
