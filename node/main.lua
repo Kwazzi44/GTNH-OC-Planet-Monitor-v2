@@ -118,31 +118,30 @@ local function onModem(_, _, sender, port, _, raw)
     register(list)
 
   elseif msg.type == protocol.RESTART then
-    -- Включить конкретную машину
-    local target_addr = msg.machine
-    local ok, info = false, "Machine not found"
-    for _, m in ipairs(_known) do
-      if m.addr == target_addr then
-        local rs_cfg = ncfg.redstone_fallback and ncfg.redstone_fallback[target_addr]
-        ok, info = mch.restart(target_addr, rs_cfg)
-        break
-      end
+    -- Включить конкретную машину по имени через Redstone
+    local target_name = msg.machine   -- Hub теперь шлёт имя машины
+    local ok, info = false, "Machine not found: " .. tostring(target_name)
+    local rs_cfg = ncfg.redstone_restart and ncfg.redstone_restart[target_name]
+    if rs_cfg then
+      ok, info = mch.restart(target_name, rs_cfg)
+    elseif not rs_cfg then
+      info = "No redstone config for: " .. tostring(target_name)
     end
-    sendToHub(protocol.mkAck(ncfg.planet_name, msg.machine, ok, info))
+    sendToHub(protocol.mkAck(ncfg.planet_name, target_name, ok, info))
 
-    -- После restart — обновим статус через 2с
+    -- После restart — ждём и отправляем обновлённый статус
     os.sleep(2)
     doStatusUpdate()
     sendToHub(protocol.mkPong(ncfg.planet_name, _known))
 
   elseif msg.type == protocol.RESTART_ALL then
-    -- Включить все выключенные машины
+    -- Включить все выключенные машины через Redstone
     local any = false
     for _, m in ipairs(_known) do
       if not m.active then
         any = true
-        local rs_cfg = ncfg.redstone_fallback and ncfg.redstone_fallback[m.addr]
-        local ok, info = mch.restart(m.addr, rs_cfg)
+        local rs_cfg = ncfg.redstone_restart and ncfg.redstone_restart[m.name]
+        local ok, info = mch.restart(m.name, rs_cfg)
         sendToHub(protocol.mkAck(ncfg.planet_name, m.name, ok, info))
       end
     end
@@ -158,7 +157,6 @@ local function onModem(_, _, sender, port, _, raw)
     -- Полное пересканирование адаптеров
     local list = doFullScan()
     sendToHub(protocol.mkScanResult(ncfg.planet_name, list))
-    -- И сразу зарегистрировать (мог появиться новый мультиблок)
     register(list)
   end
 end
@@ -177,15 +175,34 @@ local function init()
   end
 
   io.write("[Node] Starting on planet: " .. (ncfg.planet_name or "?") .. "\n")
-  io.write("[Node] Scanning machines...\n")
 
-  local list = doFullScan()
-  io.write("[Node] Found " .. #list .. " machine(s).\n")
-  for _, m2 in ipairs(list) do
-    io.write("  - " .. m2.name .. " [" .. (m2.active and "ACTIVE" or "OFFLINE") .. "]\n")
+  -- Сбросить все редстоун-выходы в безопасное состояние
+  if ncfg.redstone_restart then
+    mch.resetAllOutputs(ncfg.redstone_restart)
+    io.write("[Node] Redstone outputs reset to LOW.\n")
   end
 
-  -- Регистрируемся на Hub (broadcast, т.к. адрес Hub'а ещё неизвестен)
+  -- Проверить наличие Redstone I/O если есть конфиг
+  if ncfg.redstone_restart and next(ncfg.redstone_restart) then
+    if not component.isAvailable("redstone") then
+      io.write("[Node] WARNING: Redstone I/O not found! Restart will not work.\n")
+    else
+      io.write("[Node] Redstone I/O: OK\n")
+    end
+  end
+
+  io.write("[Node] Scanning machines...\n")
+  local list = doFullScan()
+  io.write("[Node] Found " .. #list .. " machine(s):\n")
+  for _, m2 in ipairs(list) do
+    local rs_ok = ncfg.redstone_restart and ncfg.redstone_restart[m2.name] and "[RS:OK]" or "[RS:--]"
+    io.write(string.format("  %-35s [%s] %s\n",
+      m2.name,
+      m2.active and "ACTIVE" or "OFFLINE",
+      rs_ok))
+  end
+
+  -- Регистрируемся на Hub
   register(list)
   io.write("[Node] Registration sent. Listening...\n")
 

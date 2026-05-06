@@ -158,8 +158,10 @@ function monitor.pingOne(addr)
 end
 
 --- Отправить команду restart конкретной машины
-function monitor.restartMachine(planet_addr, machine_addr)
-  send(planet_addr, protocol.mkRestart(machine_addr))
+-- @param planet_addr  string  Modem-адрес Node-компьютера
+-- @param machine_name string  Имя машины (ключ в redstone_restart на Node)
+function monitor.restartMachine(planet_addr, machine_name)
+  send(planet_addr, protocol.mkRestart(machine_name))
 end
 
 --- Отправить команду restart всех машин на планете

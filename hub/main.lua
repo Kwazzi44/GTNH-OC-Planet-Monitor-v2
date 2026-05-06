@@ -101,7 +101,8 @@ local function doRestartMachine()
     setNotify(m.name .. " is already ACTIVE.", 0x00DD55)
     return
   end
-  monitor.restartMachine(p.address, m.addr)
+  -- Передаём имя машины — Node ищет его в redstone_restart
+  monitor.restartMachine(p.address, m.name)
   setNotify("Restart sent for: " .. m.name, 0xFFAA00)
 end
 
