@@ -95,7 +95,7 @@ local function buildTaken()
   for _, p in pairs(registry.getAll()) do
     for _, m in ipairs(p.machines or {}) do
       ta[m.adapter_addr] = p.name .. " / " .. m.name
-      if m.rs_addr then tr[m.rs_addr] = p.name .. " / " .. m.name end
+      if m.redstone and m.redstone.addr then tr[m.redstone.addr] = p.name .. " / " .. m.name end
     end
   end
   return ta, tr

@@ -122,24 +122,25 @@ end
 -- @param m  table  Запись машины из registry
 -- @return ok bool, msg string
 function machines.restart(m)
-  if not m.rs_addr or m.rs_side == nil then
+  local r = m.redstone
+  if not r or not r.addr or r.side == nil then
     return false, "No redstone configured for this machine"
   end
-  local rs = rsProxy(m.rs_addr)
+  local rs = rsProxy(r.addr)
   if not rs then
-    return false, "Redstone component not found: " .. tostring(m.rs_addr)
+    return false, "Redstone component not found: " .. tostring(r.addr)
   end
 
-  local all_sides = (m.rs_side == -1)
-  local sides     = all_sides and {0,1,2,3,4,5} or {m.rs_side}
-  local color     = m.rs_color
-  local mode      = m.rs_mode  or "pulse"
-  local pulse     = m.rs_pulse or 0.5
+  local all_sides = (r.side == -1)
+  local sides     = all_sides and {0,1,2,3,4,5} or {r.side}
+  local color     = r.color
+  local mode      = r.mode  or "pulse"
+  local pulse     = r.pulse or 0.5
 
   local function high() for _, s in ipairs(sides) do rsHigh(rs, s, color) end end
   local function low()  for _, s in ipairs(sides) do rsLow(rs, s, color) end  end
 
-  local sides_str = all_sides and "ALL" or tostring(m.rs_side)
+  local sides_str = all_sides and "ALL" or tostring(r.side)
 
   if mode == "pulse" then
     high(); os.sleep(pulse); low()
@@ -163,16 +164,16 @@ function machines.resetAllRedstone(planet_list)
   local done = {}
   for _, p in ipairs(planet_list) do
     for _, m in ipairs(p.machines or {}) do
-      if m.rs_addr and m.rs_side ~= nil then
-        local rs = rsProxy(m.rs_addr)
+      if m.redstone and m.redstone.addr and m.redstone.side ~= nil then
+        local rs = rsProxy(m.redstone.addr)
         if rs then
-          if m.rs_side == -1 then
-            for s = 0, 5 do rsLow(rs, s, m.rs_color) end
+          if m.redstone.side == -1 then
+            for s = 0, 5 do rsLow(rs, s, m.redstone.color) end
           else
-            local key = m.rs_addr .. ":" .. m.rs_side
+            local key = m.redstone.addr .. ":" .. m.redstone.side
             if not done[key] then
               done[key] = true
-              rsLow(rs, m.rs_side, m.rs_color)
+              rsLow(rs, m.redstone.side, m.redstone.color)
             end
           end
         end

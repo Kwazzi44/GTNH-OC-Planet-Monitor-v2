@@ -5,16 +5,20 @@
 -- _data["Ceres"] = {
 --   name     = "Ceres",
 --   status   = "OK",          -- OK | PARTIAL | RING_DOWN | UNKNOWN
---   last_ok  = <os.time()>,   -- когда последний раз всё было хорошо
+--   last_ok  = <os.time()>,
+--   meta     = {},            -- для расширения
 --   machines = {
 --     {
 --       name         = "EBF",
---       adapter_addr = "94c19a39-...",  -- адрес gt_machine компонента
---       rs_addr      = "3f3ae22d-...",  -- адрес redstone компонента (или nil)
---       rs_side      = 2,               -- сторона Redstone I/O
---       rs_color     = nil,             -- nil = прямой, 0-15 = bundled
---       rs_mode      = "pulse",         -- pulse | enable | toggle
---       rs_pulse     = 0.5,
+--       adapter_addr = "94c19a39-...",
+--       redstone     = {
+--         addr  = "3f3ae22d-...",
+--         side  = 2,
+--         color = nil,
+--         mode  = "pulse",
+--         pulse = 0.5,
+--       }, -- или nil если нет редстоуна
+--       meta         = {},    -- для расширения
 --       -- runtime поля (не сохраняются):
 --       active       = false,
 --       error        = nil,
@@ -30,16 +34,15 @@ local _data = {}   -- keyed by planet name
 
 -- ─── Сохранение / загрузка ───────────────────────────────────────────────
 
-local SAVE_KEYS = { "name", "machines" }
+local SAVE_KEYS = { "name", "machines", "meta" }
 local MACHINE_SAVE = {
-  "name","adapter_addr","rs_addr","rs_side","rs_color","rs_mode","rs_pulse"
+  "name","adapter_addr","redstone","meta"
 }
 
 local function stripRuntime(planets)
-  -- Убираем runtime-поля перед сохранением
   local out = {}
   for pname, p in pairs(planets) do
-    local pm = { name = p.name, machines = {} }
+    local pm = { name = p.name, meta = p.meta or {}, machines = {} }
     for _, m in ipairs(p.machines or {}) do
       local sm = {}
       for _, k in ipairs(MACHINE_SAVE) do sm[k] = m[k] end
@@ -64,11 +67,25 @@ function registry.load()
   local ok, result = pcall(serial.unserialize, raw)
   if ok and type(result) == "table" then
     _data = result
-    -- Инициализируем runtime-поля
+    -- Инициализируем runtime-поля и мигрируем старую базу (Schema Migration)
     for _, p in pairs(_data) do
       p.status  = "UNKNOWN"
       p.last_ok = 0
+      p.meta    = p.meta or {}
       for _, m in ipairs(p.machines or {}) do
+        -- Миграция старых flat-полей (rs_*) в блок redstone={}
+        if m.rs_addr and not m.redstone then
+          m.redstone = {
+            addr  = m.rs_addr,
+            side  = m.rs_side,
+            color = m.rs_color,
+            mode  = m.rs_mode,
+            pulse = m.rs_pulse
+          }
+          -- Удаляем старые поля
+          m.rs_addr = nil; m.rs_side = nil; m.rs_color = nil; m.rs_mode = nil; m.rs_pulse = nil
+        end
+        m.meta   = m.meta or {}
         m.active = false
         m.error  = nil
       end
@@ -86,7 +103,7 @@ end
 
 function registry.addPlanet(name)
   if not _data[name] then
-    _data[name] = { name = name, status = "UNKNOWN", last_ok = 0, machines = {} }
+    _data[name] = { name = name, status = "UNKNOWN", last_ok = 0, meta = {}, machines = {} }
     registry.save()
   end
   return _data[name]
@@ -106,6 +123,7 @@ function registry.addMachine(planet_name, machine)
   end
   machine.active = false
   machine.error  = nil
+  machine.meta   = machine.meta or {}
   table.insert(p.machines, machine)
   registry.save()
   return true

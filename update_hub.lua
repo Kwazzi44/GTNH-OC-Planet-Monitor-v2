@@ -49,7 +49,13 @@ end
 io.write("\n==========================================\n")
 io.write("  GTNH Planet Monitor — UPDATER          \n")
 io.write("==========================================\n")
-io.write("[NOTE] Registry and log are NOT touched.\n\n")
+io.write("[NOTE] Registry and log in /home/ are NOT touched.\n\n")
+
+io.write("Cleaning up old files in /home/hub/...\n")
+if filesystem.exists("/home/hub") then
+  filesystem.remove("/home/hub")
+end
+io.write("Cleaned.\n\n")
 
 local ok_n, fail_n = 0, 0
 for _, e in ipairs(FILES) do
