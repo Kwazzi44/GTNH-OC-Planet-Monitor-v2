@@ -182,14 +182,34 @@ local function viewDatabase()
     end
     gpu.setBackground(C.bg)
     
-    drawText(rx, H-2, "[Enter] Select Planet  [Del] Delete Planet  [Esc] Back", C.dim)
+    drawText(rx, H-2, "[Enter/Right] Select Planet  [Del] Delete  [B/Left] Back", C.dim)
     
-    local _, _, _, code = event.pull("key_down")
-    if code == 200 and sel_p > 1 then sel_p = sel_p - 1 -- Up
-    elseif code == 208 and sel_p < #planets then sel_p = sel_p + 1 -- Down
-    elseif code == 14 then return -- Backspace / Esc equivalent? Wait, esc is code 1.
-    elseif code == 1 then return -- Esc
-    elseif code == 211 then -- Delete
+    local action = nil
+    local ev = table.pack(event.pull())
+    local e = ev[1]
+    
+    if e == "key_down" then
+      local char, code = ev[3], ev[4]
+      if code == 200 then action = "up"
+      elseif code == 208 then action = "down"
+      elseif code == 14 or code == 1 or code == 203 or char == 98 or char == 66 then action = "back"
+      elseif code == 211 then action = "delete"
+      elseif code == 28 or code == 205 then action = "enter"
+      end
+    elseif e == "touch" then
+      local tx, ty, tbtn = ev[3], ev[4], ev[5]
+      if tbtn == 0 and tx >= rx then
+        if ty >= 4 and ty <= 3 + #planets then
+          sel_p = ty - 3
+          action = "enter"
+        end
+      end
+    end
+    
+    if action == "up" and sel_p > 1 then sel_p = sel_p - 1
+    elseif action == "down" and sel_p < #planets then sel_p = sel_p + 1
+    elseif action == "back" then return
+    elseif action == "delete" then
       local p = planets[sel_p]
       drawText(rx, H-4, "Are you sure you want to delete planet " .. p.name .. "? (y/n)", C.warn)
       local ans = readInput(rx, H-3, "> ", "")
@@ -198,7 +218,7 @@ local function viewDatabase()
         planets = registry.getPlanetList()
         if sel_p > #planets then sel_p = math.max(1, #planets) end
       end
-    elseif code == 28 then -- Enter (View Machines)
+    elseif action == "enter" then
       -- Submenu for machines
       local p = planets[sel_p]
       local sel_m = 1
@@ -223,13 +243,34 @@ local function viewDatabase()
           end
         end
         gpu.setBackground(C.bg)
-        drawText(rx, H-2, "[R]ename  [Del]elete  [C]hange Adapter  [Esc] Back", C.dim)
+        drawText(rx, H-2, "[R]ename  [Del]elete  [C]hange Adapter  [B/Left] Back", C.dim)
         
-        local _, _, char, mcode = event.pull("key_down")
-        if mcode == 200 and sel_m > 1 then sel_m = sel_m - 1
-        elseif mcode == 208 and sel_m < #(p.machines or {}) then sel_m = sel_m + 1
-        elseif mcode == 1 or mcode == 14 then in_machines = false
-        elseif char == 114 then -- 'r'
+        local maction = nil
+        local mev = table.pack(event.pull())
+        local me = mev[1]
+        
+        if me == "key_down" then
+          local mchar, mcode = mev[3], mev[4]
+          if mcode == 200 then maction = "up"
+          elseif mcode == 208 then maction = "down"
+          elseif mcode == 1 or mcode == 14 or mcode == 203 or mchar == 98 or mchar == 66 then maction = "back"
+          elseif mchar == 114 or mchar == 82 then maction = "rename"
+          elseif mcode == 211 then maction = "delete"
+          elseif mchar == 99 or mchar == 67 then maction = "change"
+          end
+        elseif me == "touch" then
+          local tx, ty, tbtn = mev[3], mev[4], mev[5]
+          if tbtn == 0 and tx >= rx then
+            if ty >= 4 and ty <= 3 + #(p.machines or {}) then
+              sel_m = ty - 3
+            end
+          end
+        end
+        
+        if maction == "up" and sel_m > 1 then sel_m = sel_m - 1
+        elseif maction == "down" and sel_m < #(p.machines or {}) then sel_m = sel_m + 1
+        elseif maction == "back" then in_machines = false
+        elseif maction == "rename" then
           if #(p.machines or {}) > 0 then
             local m = p.machines[sel_m]
             local newName = readInput(rx, H-4, "New name: ", m.name)
@@ -238,7 +279,7 @@ local function viewDatabase()
               registry.save()
             end
           end
-        elseif mcode == 211 then -- Delete
+        elseif maction == "delete" then
           if #(p.machines or {}) > 0 then
             local m = p.machines[sel_m]
             drawText(rx, H-4, "Delete machine " .. m.name .. "? (y/n)", C.warn)
@@ -248,7 +289,7 @@ local function viewDatabase()
               if sel_m > #(p.machines or {}) then sel_m = math.max(1, #(p.machines or {})) end
             end
           end
-        elseif char == 99 then -- 'c'
+        elseif maction == "change" then
           if #(p.machines or {}) > 0 then
             local m = p.machines[sel_m]
             clearRight()
@@ -334,7 +375,7 @@ local function run()
         if sel > 1 then sel = sel - 1; drawMainMenu(sel) end
       elseif code == 208 then -- Down
         if sel < #MENU_ITEMS then sel = sel + 1; drawMainMenu(sel) end
-      elseif code == 28 then -- Enter
+      elseif code == 28 or code == 205 then -- Enter or Right Arrow
         local res = MENU_ITEMS[sel].fn()
         if res == "exit" then break end
         -- Redraw full screen after returning
