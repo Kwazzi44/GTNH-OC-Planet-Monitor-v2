@@ -93,9 +93,10 @@ local function pickRedstone(rs_list, taken_redstone)
 
   -- Сторона
   ln("\nSides: 0=DOWN 1=UP 2=NORTH 3=SOUTH 4=WEST 5=EAST")
-  local a = ask("Which side of this Redstone I/O faces the controller? (0-5): ")
+  ln("  Enter -1 to broadcast on ALL sides (safe if no other blocks around)")
+  local a = ask("Side (-1 or 0-5): ")
   local rs_side = tonumber(a)
-  if not rs_side or rs_side < 0 or rs_side > 5 then
+  if not rs_side or rs_side < -1 or rs_side > 5 then
     ln("[!] Invalid side. Redstone not configured.")
     return nil, nil, nil, nil, nil
   end

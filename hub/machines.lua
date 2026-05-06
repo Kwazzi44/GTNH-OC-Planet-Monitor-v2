@@ -90,13 +90,26 @@ function machines.scanRedstone()
 end
 
 --- Обновить статус одной машины
--- @param m  table  Запись машины из registry (содержит adapter_addr)
--- @return active bool, err string?
+-- Возвращает: active bool, err string?
+-- err == "RING_DOWN" означает что компонент исчез из сети
+-- err == другое  означает что компонент есть но что-то не так
 function machines.getStatus(m)
+  -- Шаг 1: проверить что адрес вообще есть в сети
+  local exists = false
+  for addr, _ in component.list() do
+    if addr == m.adapter_addr then exists = true; break end
+  end
+
+  if not exists then
+    return false, "RING_DOWN"   -- компонент исчез из OC-сети
+  end
+
+  -- Шаг 2: получить proxy и прочитать статус
   local ok, proxy = pcall(component.proxy, m.adapter_addr)
   if not ok or not proxy then
-    return false, "Adapter not found (Ring Down?)"
+    return false, "Adapter proxy error"
   end
+
   local active = readActive(proxy)
   if active == nil then
     return false, "Cannot read status"
@@ -105,7 +118,8 @@ function machines.getStatus(m)
 end
 
 --- Перезапустить машину через Redstone
--- @param m  table  Запись машины из registry (содержит rs_addr, rs_side и т.д.)
+-- rs_side = -1 означает "все стороны" (broadcast)
+-- @param m  table  Запись машины из registry
 -- @return ok bool, msg string
 function machines.restart(m)
   if not m.rs_addr or m.rs_side == nil then
@@ -116,28 +130,28 @@ function machines.restart(m)
     return false, "Redstone component not found: " .. tostring(m.rs_addr)
   end
 
-  local side  = m.rs_side
-  local color = m.rs_color
-  local mode  = m.rs_mode  or "pulse"
-  local pulse = m.rs_pulse or 0.5
+  local all_sides = (m.rs_side == -1)
+  local sides     = all_sides and {0,1,2,3,4,5} or {m.rs_side}
+  local color     = m.rs_color
+  local mode      = m.rs_mode  or "pulse"
+  local pulse     = m.rs_pulse or 0.5
+
+  local function high() for _, s in ipairs(sides) do rsHigh(rs, s, color) end end
+  local function low()  for _, s in ipairs(sides) do rsLow(rs, s, color) end  end
+
+  local sides_str = all_sides and "ALL" or tostring(m.rs_side)
 
   if mode == "pulse" then
-    rsHigh(rs, side, color)
-    os.sleep(pulse)
-    rsLow(rs, side, color)
-    return true, string.format("Pulse sent (side=%d, %.1fs)", side, pulse)
+    high(); os.sleep(pulse); low()
+    return true, string.format("Pulse sent (sides=%s, %.1fs)", sides_str, pulse)
 
   elseif mode == "enable" then
-    rsHigh(rs, side, color)
-    return true, string.format("RS HIGH set (side=%d)", side)
+    high()
+    return true, string.format("RS HIGH set (sides=%s)", sides_str)
 
   elseif mode == "toggle" then
-    rsLow(rs, side, color)
-    os.sleep(0.1)
-    rsHigh(rs, side, color)
-    os.sleep(pulse)
-    rsLow(rs, side, color)
-    return true, string.format("Toggle sent (side=%d)", side)
+    low(); os.sleep(0.1); high(); os.sleep(pulse); low()
+    return true, string.format("Toggle sent (sides=%s)", sides_str)
 
   else
     return false, "Unknown mode: " .. tostring(mode)
@@ -150,15 +164,22 @@ function machines.resetAllRedstone(planet_list)
   for _, p in ipairs(planet_list) do
     for _, m in ipairs(p.machines or {}) do
       if m.rs_addr and m.rs_side ~= nil then
-        local key = m.rs_addr .. ":" .. m.rs_side .. ":" .. tostring(m.rs_color)
-        if not done[key] then
-          done[key] = true
-          local rs = rsProxy(m.rs_addr)
-          if rs then rsLow(rs, m.rs_side, m.rs_color) end
+        local rs = rsProxy(m.rs_addr)
+        if rs then
+          if m.rs_side == -1 then
+            for s = 0, 5 do rsLow(rs, s, m.rs_color) end
+          else
+            local key = m.rs_addr .. ":" .. m.rs_side
+            if not done[key] then
+              done[key] = true
+              rsLow(rs, m.rs_side, m.rs_color)
+            end
+          end
         end
       end
     end
   end
 end
+
 
 return machines

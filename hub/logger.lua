@@ -7,9 +7,12 @@ local logger = {}
 local _lines = {}
 
 local function ts()
-  local t = os.date("*t")
-  return string.format("[%04d-%02d-%02d %02d:%02d:%02d]",
-    t.year, t.month, t.day, t.hour, t.min, t.sec)
+  local t = math.floor(os.time())
+  local d = math.floor(t / 86400)
+  local h = math.floor((t % 86400) / 3600)
+  local m = math.floor((t % 3600) / 60)
+  local s = t % 60
+  return string.format("[D%04d %02d:%02d:%02d]", d, h, m, s)
 end
 
 local function writeLine(line)

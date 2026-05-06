@@ -48,8 +48,11 @@ local function pollAll()
       m.active = active
       m.error  = err
 
-      if not err then
-        all_missing = false   -- хотя бы один адаптер жив
+      if err == "RING_DOWN" then
+        -- компонент полностью исчез из OC-сети
+        -- all_missing остаётся true
+      else
+        all_missing = false   -- компонент виден в сети, кольцо цело
       end
       if not active then
         any_offline = true
@@ -148,7 +151,6 @@ local function openDetail()
 end
 
 local function runSetup()
-  -- Запускаем setup.lua поверх
   if component.isAvailable("gpu") then
     local gpu = component.gpu
     gpu.setBackground(0x000000); gpu.setForeground(0xFFFFFF)
@@ -156,8 +158,11 @@ local function runSetup()
     gpu.fill(1,1,w,h," ")
   end
   local shell = require("shell")
-  shell.execute(scriptPath .. "setup.lua")
-  registry.load()   -- перезагрузить после настройки
+  local ok, err = pcall(shell.execute, "/home/hub/setup.lua")
+  if not ok then
+    io.write("[ERROR] Setup failed: " .. tostring(err) .. "\n")
+  end
+  registry.load()
   ui.dirty = true
 end
 
@@ -321,7 +326,7 @@ local function mainLoop()
     os.sleep(0.05)
   end
 
-  event.ignore("key_down", keyListen)
+  event.ignore("key_down", onKey)
 
   -- Восстановить терминал
   if component.isAvailable("gpu") then

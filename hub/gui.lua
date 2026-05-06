@@ -169,7 +169,7 @@ function gui.drawPlanetList(planets, sel, scroll)
       -- #
       g_set(2, ry, pad(idx, 3), C.dim, bg)
       -- Planet name
-      g_set(5, ry, pad(p.planet or "?", 18), fg, bg)
+      g_set(5, ry, pad(p.name or "?", 18), fg, bg)
       -- Status
       g_set(24, ry, pad(STATUS_LABEL[st] or st, 10), scol, bg)
       -- Last seen
@@ -220,8 +220,8 @@ function gui.drawPlanetDetail(planet, sel, scroll)
   local st    = planet.status or "UNKNOWN"
   local scol  = STATUS_COLOR[st] or C.unknown
   drawHeader(
-    planet.planet .. "  [" .. (STATUS_LABEL[st] or st) .. "]",
-    "Last seen: " .. timeAgo(planet.last_seen)
+    planet.name .. "  [" .. (STATUS_LABEL[st] or st) .. "]",
+    "Last seen: " .. timeAgo(planet.last_ok)
   )
 
   -- Column header
