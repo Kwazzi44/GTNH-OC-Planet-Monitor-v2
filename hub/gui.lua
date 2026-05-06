@@ -81,29 +81,36 @@ end
 -- ─── Header & Footer ──────────────────────────────────────────────────────
 
 local function drawHeader(line1, line2)
-  g_fill(1, 1, W, 1, " ", C.title, C.header_bg)
-  g_fill(1, 2, W, 1, " ", C.header_fg, C.header_bg)
-  local tx = math.max(1, math.floor((W - unicode.len(line1)) / 2) + 1)
-  g_set(tx, 1, line1, C.title, C.header_bg)
-  if line2 then
-    g_set(2, 2, pad(line2, W - 2), C.header_fg, C.header_bg)
-  end
-  g_fill(1, 3, W, 1, string.rep("=", W), C.border, C.bg)
+  local len = unicode.len(line1)
+  local tx = math.max(1, math.floor((W - len) / 2) + 1)
+  local left_pad = string.rep(" ", tx - 1)
+  local right_pad = string.rep(" ", W - (tx - 1) - len)
+  g_set(1, 1, left_pad .. line1 .. right_pad, C.title, C.header_bg)
+
+  local l2 = " " .. tostring(line2 or "")
+  g_set(1, 2, pad(l2, W), C.header_fg, C.header_bg)
+  
+  g_set(1, 3, string.rep("=", W), C.border, C.bg)
 end
 
 local function drawFooter(keys)
-  -- keys = { {"K", "label"}, ... }
-  g_fill(1, H, W, 1, " ", C.dim, C.key_bg)
+  _gpu.setBackground(C.key_bg)
+  _gpu.setForeground(C.dim)
+  _gpu.set(1, H, " ")
   local x = 2
   for _, k in ipairs(keys) do
     if x >= W - 2 then break end
-    _gpu.setBackground(C.key_bg)
     _gpu.setForeground(C.key)
     _gpu.set(x, H, "[" .. k[1] .. "]")
     x = x + #k[1] + 2
     _gpu.setForeground(C.dim)
     _gpu.set(x, H, k[2])
-    x = x + #k[2] + 2
+    x = x + #k[2]
+    _gpu.set(x, H, "  ")
+    x = x + 2
+  end
+  if x <= W then
+    g_set(x, H, string.rep(" ", W - x + 1), C.dim, C.key_bg)
   end
 end
 
