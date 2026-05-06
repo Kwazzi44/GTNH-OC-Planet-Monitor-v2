@@ -189,12 +189,12 @@ local function viewDatabase()
     local e = ev[1]
     
     if e == "key_down" then
-      local char, code = ev[3], ev[4]
+      local code = ev[4]
       if code == 200 then action = "up"
       elseif code == 208 then action = "down"
-      elseif code == 14 or code == 1 or code == 203 or char == 98 or char == 66 then action = "back"
+      elseif code == 14 or code == 1 or code == 203 or code == 48 then action = "back" -- Backspace, Esc, Left, B
       elseif code == 211 then action = "delete"
-      elseif code == 28 or code == 205 then action = "enter"
+      elseif code == 28 or code == 205 then action = "enter" -- Enter, Right
       end
     elseif e == "touch" then
       local tx, ty, tbtn = ev[3], ev[4], ev[5]
@@ -250,13 +250,13 @@ local function viewDatabase()
         local me = mev[1]
         
         if me == "key_down" then
-          local mchar, mcode = mev[3], mev[4]
+          local mcode = mev[4]
           if mcode == 200 then maction = "up"
           elseif mcode == 208 then maction = "down"
-          elseif mcode == 1 or mcode == 14 or mcode == 203 or mchar == 98 or mchar == 66 then maction = "back"
-          elseif mchar == 114 or mchar == 82 then maction = "rename"
-          elseif mcode == 211 then maction = "delete"
-          elseif mchar == 99 or mchar == 67 then maction = "change"
+          elseif mcode == 1 or mcode == 14 or mcode == 203 or mcode == 48 then maction = "back" -- Esc, Backspace, Left, B
+          elseif mcode == 19 then maction = "rename" -- R
+          elseif mcode == 211 then maction = "delete" -- Delete
+          elseif mcode == 46 then maction = "change" -- C
           end
         elseif me == "touch" then
           local tx, ty, tbtn = mev[3], mev[4], mev[5]

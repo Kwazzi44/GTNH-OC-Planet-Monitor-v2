@@ -172,41 +172,28 @@ end
 -- ─── Keyboard ─────────────────────────────────────────────────────────────
 
 local function onKey(_, _, char, code)
-  local q_char  = string.byte("q")
-  local Q_char  = string.byte("Q")
-  local b_char  = string.byte("b")
-  local B_char  = string.byte("B")
-  local l_char  = string.byte("l")
-  local L_char  = string.byte("L")
-  local r_char  = string.byte("r")
-  local R_char  = string.byte("R")
-  local a_char  = string.byte("a")
-  local A_char  = string.byte("A")
-  local s_char  = string.byte("s")
-  local S_char  = string.byte("S")
-
-  -- Q → выход
-  if char == q_char or char == Q_char or code == 1 then
+  -- Q → выход (code 16 или Esc = 1)
+  if code == 16 or code == 1 then
     _running = false; return
   end
-  -- B → назад
-  if char == b_char or char == B_char then
+  -- B → назад (code 48 или Backspace = 14)
+  if code == 48 or code == 14 then
     ui.view = VIEW.PLANETS; ui.dirty = true; return
   end
-  -- L → лог
-  if char == l_char or char == L_char then
+  -- L → лог (code 38)
+  if code == 38 then
     ui.log_scroll = nil; ui.view = VIEW.LOG; ui.dirty = true; return
   end
-  -- R → poll сейчас
-  if char == r_char or char == R_char then
+  -- R → poll сейчас (code 19)
+  if code == 19 then
     pollAll(); setNotify("Refreshed", 0x4477FF); return
   end
-  -- A → restart all
-  if char == a_char or char == A_char then
+  -- A → restart all (code 30)
+  if code == 30 then
     doRestartAll(); return
   end
-  -- S → setup (только из главного экрана)
-  if (char == s_char or char == S_char) and ui.view == VIEW.PLANETS then
+  -- S → setup (code 31)
+  if code == 31 and ui.view == VIEW.PLANETS then
     runSetup(); return
   end
   -- ENTER
