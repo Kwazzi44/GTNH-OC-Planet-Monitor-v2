@@ -2,9 +2,7 @@
 -- hub/main.lua — Entry Point: Polling Loop + GUI
 -- =============================================================================
 
-local scriptPath = (debug and debug.getinfo and
-  debug.getinfo(1,"S").source:match("^@(.+/)")) or ""
-package.path = scriptPath .. "?.lua;" .. package.path
+package.path = "/home/hub/?.lua;" .. package.path
 
 local component = require("component")
 local event     = require("event")

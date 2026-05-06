@@ -1,11 +1,11 @@
 -- =============================================================================
 -- install_hub.lua — Hub Installer
 -- =============================================================================
--- Запуск на Hub-компьютере (нужна Internet Card):
---   wget -q https://raw.githubusercontent.com/ТВОЙ_НИК/GTNH-OC-Planet-Monitor/main/install_hub.lua /tmp/ih.lua
+-- Запуск (нужна Internet Card):
+--   wget -q https://raw.githubusercontent.com/Kwazzi44/GTNH-OC-Planet-Monitor/main/install_hub.lua /tmp/ih.lua
 --   lua /tmp/ih.lua
 
-local REPO = "https://raw.githubusercontent.com/ТВОЙ_НИК/GTNH-OC-Planet-Monitor/main"
+local REPO = "https://raw.githubusercontent.com/Kwazzi44/GTNH-OC-Planet-Monitor/main"
 
 local component  = require("component")
 local filesystem = require("filesystem")
@@ -16,13 +16,16 @@ if not component.isAvailable("internet") then
 end
 
 local FILES = {
-  { "/hub/config.lua",   "/hub/config.lua"   },
-  { "/hub/logger.lua",   "/hub/logger.lua"   },
-  { "/hub/registry.lua", "/hub/registry.lua" },
-  { "/hub/machines.lua", "/hub/machines.lua" },
-  { "/hub/gui.lua",      "/hub/gui.lua"      },
-  { "/hub/setup.lua",    "/hub/setup.lua"    },
-  { "/hub/main.lua",     "/hub/main.lua"     },
+  { "/hub/config.lua",      "/home/hub/config.lua"    },
+  { "/hub/logger.lua",      "/home/hub/logger.lua"    },
+  { "/hub/registry.lua",    "/home/hub/registry.lua"  },
+  { "/hub/machines.lua",    "/home/hub/machines.lua"  },
+  { "/hub/gui.lua",         "/home/hub/gui.lua"       },
+  { "/hub/setup.lua",       "/home/hub/setup.lua"     },
+  { "/hub/main.lua",        "/home/hub/main.lua"      },
+  { "/update_hub.lua",      "/home/update_hub.lua"    },
+  { "/uninstall_hub.lua",   "/home/uninstall_hub.lua" },
+  { "/cleanup_old.lua",     "/home/cleanup_old.lua"   },
 }
 
 local function mkdirs(dest)
@@ -43,13 +46,13 @@ local function download(url, dest)
   return ok, err
 end
 
-io.write("\n===========================================\n")
-io.write("  GTNH Planet Monitor — HUB INSTALLER     \n")
-io.write("===========================================\n\n")
+io.write("\n==========================================\n")
+io.write("  GTNH Planet Monitor — HUB INSTALLER    \n")
+io.write("==========================================\n\n")
 
 local ok_n, fail_n = 0, 0
 for _, e in ipairs(FILES) do
-  io.write(string.format("  [..] %-30s", e[2]))
+  io.write(string.format("  [..] %-35s", e[2]))
   local ok, err = download(REPO .. e[1], e[2])
   if ok then
     io.write("\r  [OK] " .. e[2] .. "\n"); ok_n = ok_n + 1
@@ -62,14 +65,18 @@ end
 io.write(string.format("\nDone: %d OK, %d FAILED\n", ok_n, fail_n))
 
 if fail_n == 0 then
-  io.write("\nCreate /home/autorun.lua? [y/n]: ")
+  -- Создать autorun
+  io.write("\nCreate /home/autorun.lua to auto-start on boot? [y/n]: ")
   local a = io.read()
   if a and a:lower() == "y" then
     local f = io.open("/home/autorun.lua", "w")
-    if f then f:write('shell.execute("/hub/main.lua")\n'); f:close() end
-    io.write("[OK] autorun created.\n")
+    if f then
+      f:write('shell.execute("/home/hub/main.lua")\n')
+      f:close()
+      io.write("[OK] /home/autorun.lua created.\n")
+    end
   end
   io.write("\nInstallation complete!\n")
-  io.write("First run setup: lua /hub/setup.lua\n")
-  io.write("Then start hub:  lua /hub/main.lua\n\n")
+  io.write("Step 1:  lua /home/hub/setup.lua   (first time only)\n")
+  io.write("Step 2:  lua /home/hub/main.lua\n\n")
 end

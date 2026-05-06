@@ -1,12 +1,10 @@
 -- =============================================================================
 -- update_hub.lua — Обновление файлов Hub с GitHub
 -- =============================================================================
--- Скачивает свежие версии всех скриптов, НЕ трогает реестр и лог.
--- Запуск: lua /update_hub.lua
--- Или через wget:
---   wget -q <REPO>/update_hub.lua /tmp/upd.lua && lua /tmp/upd.lua
+-- Скачивает свежие версии всех скриптов. Реестр и лог НЕ трогает.
+-- Запуск: lua /home/update_hub.lua
 
-local REPO = "https://raw.githubusercontent.com/ТВОЙ_НИК/GTNH-OC-Planet-Monitor/main"
+local REPO = "https://raw.githubusercontent.com/Kwazzi44/GTNH-OC-Planet-Monitor/main"
 
 local component  = require("component")
 local filesystem = require("filesystem")
@@ -16,18 +14,16 @@ if not component.isAvailable("internet") then
   io.write("[ERROR] Internet Card not found!\n"); os.exit(1)
 end
 
--- Только скрипты — данные не трогаем
 local FILES = {
-  { "/hub/config.lua",      "/hub/config.lua"      },
-  { "/hub/logger.lua",      "/hub/logger.lua"       },
-  { "/hub/registry.lua",    "/hub/registry.lua"     },
-  { "/hub/machines.lua",    "/hub/machines.lua"     },
-  { "/hub/gui.lua",         "/hub/gui.lua"          },
-  { "/hub/setup.lua",       "/hub/setup.lua"        },
-  { "/hub/main.lua",        "/hub/main.lua"         },
-  { "/install_hub.lua",     "/install_hub.lua"      },
-  { "/update_hub.lua",      "/update_hub.lua"       },
-  { "/uninstall_hub.lua",   "/uninstall_hub.lua"    },
+  { "/hub/config.lua",    "/home/hub/config.lua"    },
+  { "/hub/logger.lua",    "/home/hub/logger.lua"    },
+  { "/hub/registry.lua",  "/home/hub/registry.lua"  },
+  { "/hub/machines.lua",  "/home/hub/machines.lua"  },
+  { "/hub/gui.lua",       "/home/hub/gui.lua"       },
+  { "/hub/setup.lua",     "/home/hub/setup.lua"     },
+  { "/hub/main.lua",      "/home/hub/main.lua"      },
+  { "/update_hub.lua",    "/home/update_hub.lua"    },
+  { "/uninstall_hub.lua", "/home/uninstall_hub.lua" },
 }
 
 local function mkdirs(dest)
@@ -48,17 +44,14 @@ local function download(url, dest)
   return ok, err
 end
 
-io.write("\n")
-io.write("==========================================\n")
+io.write("\n==========================================\n")
 io.write("  GTNH Planet Monitor — UPDATER          \n")
 io.write("==========================================\n")
-io.write("Repository: " .. REPO .. "\n")
 io.write("[NOTE] Registry and log are NOT touched.\n\n")
 
 local ok_n, fail_n = 0, 0
-
 for _, e in ipairs(FILES) do
-  io.write(string.format("  [..] %-30s", e[2]))
+  io.write(string.format("  [..] %-35s", e[2]))
   local ok, err = download(REPO .. e[1], e[2])
   if ok then
     io.write("\r  [OK] " .. e[2] .. "\n"); ok_n = ok_n + 1
@@ -68,11 +61,7 @@ for _, e in ipairs(FILES) do
   end
 end
 
-io.write("\n")
-io.write(string.format("Done: %d updated, %d failed\n", ok_n, fail_n))
-
+io.write(string.format("\nDone: %d updated, %d failed\n", ok_n, fail_n))
 if fail_n == 0 then
-  io.write("\nUpdate complete! Run: lua /hub/main.lua\n\n")
-else
-  io.write("\n[WARN] Some files failed. Check REPO URL and internet connection.\n\n")
+  io.write("\nUpdate complete! Run: lua /home/hub/main.lua\n\n")
 end

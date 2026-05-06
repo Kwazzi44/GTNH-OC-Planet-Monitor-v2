@@ -5,9 +5,7 @@
 -- Показывает ТОЛЬКО незарегистрированные адаптеры.
 -- Каждый адаптер привязывается к планете + redstone-стороне.
 
-local scriptPath = (debug and debug.getinfo and
-  debug.getinfo(1,"S").source:match("^@(.+/)")) or ""
-package.path = scriptPath .. "?.lua;" .. package.path
+package.path = "/home/hub/?.lua;" .. package.path
 
 local component = require("component")
 local os        = require("os")
