@@ -160,7 +160,7 @@ function gui.drawPlanetList(planets, sel, scroll)
     local idx = scroll + i
     local ry  = LIST_Y + i
     if idx > count then
-      g_fill(1, ry, W, 1, " ", C.text, C.bg)
+      g_set(1, ry, pad(" ", W), C.text, C.bg)
     else
       local p   = planets[idx]
       local isSel  = (idx == sel)
@@ -171,14 +171,6 @@ function gui.drawPlanetList(planets, sel, scroll)
       local st   = p.status or "UNKNOWN"
       local scol = STATUS_COLOR[st] or C.unknown
 
-      -- #
-      g_set(2, ry, pad(idx, 3), C.dim, bg)
-      -- Planet name
-      g_set(5, ry, pad(p.name or "?", 18), fg, bg)
-      -- Status
-      g_set(24, ry, pad(STATUS_LABEL[st] or st, 10), scol, bg)
-      -- Last seen
-      g_set(35, ry, pad(timeAgo(p.last_seen), 10), C.dim, bg)
       -- Machines ratio
       local total, active = 0, 0
       for _, m in ipairs(p.machines or {}) do
@@ -188,13 +180,22 @@ function gui.drawPlanetList(planets, sel, scroll)
       local mtext = total > 0 and (active .. "/" .. total) or "—"
       local mcol  = (active == total and total > 0) and C.ok
                  or (total > 0 and C.partial or C.unknown)
-      g_set(46, ry, pad(mtext, 10), mcol, bg)
-      -- Info hint
+
+      local hint, hcol = "", C.bg
       if st == "RING_DOWN" then
-        g_set(57, ry, "[!] Manual needed", C.ring_down, bg)
+        hint, hcol = "[!] Manual needed", C.ring_down
       elseif st == "PARTIAL" then
-        g_set(57, ry, "[*] Can restart", C.partial, bg)
+        hint, hcol = "[*] Can restart", C.partial
       end
+
+      -- Draw continuous row to prevent flicker
+      g_set(1, ry, " ", C.dim, bg)
+      g_set(2, ry, pad(idx, 3), C.dim, bg)
+      g_set(5, ry, pad(p.name or "?", 19), fg, bg)
+      g_set(24, ry, pad(STATUS_LABEL[st] or st, 11), scol, bg)
+      g_set(35, ry, pad(timeAgo(p.last_seen), 11), C.dim, bg)
+      g_set(46, ry, pad(mtext, 11), mcol, bg)
+      g_set(57, ry, pad(hint, W - 56), hcol, bg)
     end
   end
 
@@ -250,20 +251,20 @@ function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
     local idx = scroll + i
     local ry  = LIST_Y + i
     if idx > count then
-      g_fill(1, ry, 45, 1, " ", C.text, C.bg)
+      g_set(1, ry, pad(" ", 45), C.text, C.bg)
     else
       local m     = machines[idx]
       local isSel = (idx == sel)
       local bg    = isSel and C.sel_bg or C.bg
       local fg    = isSel and C.sel_fg or C.text
-      g_fill(1, ry, 45, 1, " ", fg, bg)
 
       local mcol  = m.active and C.ok or C.ring_down
       local micon = m.active and ">" or "X"
 
+      g_set(1, ry, " ", C.dim, bg)
       g_set(2, ry, pad(idx, 3), C.dim, bg)
-      g_set(5, ry, micon .. " " .. pad(m.name or "Unknown", 21), mcol, bg)
-      g_set(30, ry, pad(m.active and "ACTIVE" or (m.error or "OFFLINE"), 15), mcol, bg)
+      g_set(5, ry, micon .. " " .. pad(m.name or "Unknown", 23), mcol, bg)
+      g_set(30, ry, pad(m.active and "ACTIVE" or (m.error or "OFFLINE"), 16), mcol, bg)
     end
     -- Draw vertical separator
     g_set(46, ry, "|", C.border, C.bg)
@@ -353,19 +354,17 @@ function gui.drawLog(lines, scroll)
   for i = 0, LIST_H - 1 do
     local idx = scroll + i
     local ry  = LIST_Y + i
-    g_fill(1, ry, W, 1, " ", C.text, C.log_bg)
     if idx <= count then
       local line = lines[idx]
-      -- Split timestamp from content
       local ts_part, rest = line:match("^(%b[]) (.+)$")
       if ts_part then
         g_set(1, ry, ts_part, C.log_ts, C.log_bg)
-        g_set(#ts_part + 2, ry,
-          unicode.sub(rest, 1, W - #ts_part - 2),
-          C.text, C.log_bg)
+        g_set(#ts_part + 1, ry, " " .. pad(unicode.sub(rest, 1, W - #ts_part - 1), W - #ts_part), C.text, C.log_bg)
       else
-        g_set(1, ry, unicode.sub(line, 1, W), C.text, C.log_bg)
+        g_set(1, ry, pad(unicode.sub(line, 1, W), W), C.text, C.log_bg)
       end
+    else
+      g_set(1, ry, pad(" ", W), C.text, C.log_bg)
     end
   end
 
