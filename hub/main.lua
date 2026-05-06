@@ -244,6 +244,73 @@ local function onKey(_, _, char, code)
   end
 end
 
+-- ─── Mouse Touch ────────────────────────────────────────────────────────────
+
+local function onTouch(_, _, x, y, button, playerName)
+  if button ~= 0 then return end -- Only left click
+
+  local W, H = gui.getSize()
+  
+  -- Footer click (y == H)
+  if y == H then
+    if ui.view == VIEW.PLANETS then
+      if x >= 19 and x <= 34 then onKey(nil, nil, nil, 28) -- Enter (Details)
+      elseif x >= 35 and x <= 49 then onKey(nil, nil, string.byte("a"), nil) -- A (RestartAll)
+      elseif x >= 50 and x <= 61 then onKey(nil, nil, string.byte("r"), nil) -- R (Refresh)
+      elseif x >= 62 and x <= 69 then onKey(nil, nil, string.byte("l"), nil) -- L (Log)
+      elseif x >= 70 then onKey(nil, nil, string.byte("s"), nil) -- S (Setup)
+      end
+    elseif ui.view == VIEW.DETAIL then
+      if x >= 19 and x <= 34 then onKey(nil, nil, nil, 28) -- Enter (Restart)
+      elseif x >= 35 and x <= 49 then onKey(nil, nil, string.byte("a"), nil) -- A (RestartAll)
+      elseif x >= 50 and x <= 58 then onKey(nil, nil, string.byte("b"), nil) -- B (Back)
+      elseif x >= 59 then onKey(nil, nil, string.byte("q"), nil) -- Q (Quit)
+      end
+    elseif ui.view == VIEW.LOG then
+      if x >= 15 and x <= 22 then onKey(nil, nil, nil, 199) -- Home
+      elseif x >= 23 and x <= 33 then onKey(nil, nil, nil, 207) -- End
+      elseif x >= 34 then onKey(nil, nil, string.byte("b"), nil) -- B (Back)
+      end
+    end
+    return
+  end
+
+  -- List click (y >= 6 and y < H-1)
+  if y >= 6 and y < H - 1 then
+    local list_idx = y - 6
+    if ui.view == VIEW.PLANETS then
+      local planets = registry.getPlanetList()
+      local target = ui.planet_scroll + list_idx
+      if target > 0 and target <= #planets then
+        ui.planet_sel = target
+        openDetail()
+      end
+    elseif ui.view == VIEW.DETAIL then
+      local p = registry.get(ui.detail_planet)
+      if p then
+        local cnt = #(p.machines or {})
+        local target = ui.machine_scroll + list_idx
+        if target > 0 and target <= cnt then
+          ui.machine_sel = target
+          doRestartMachine()
+        end
+      end
+    end
+  end
+end
+
+-- ─── Error Wrappers ───────────────────────────────────────────────────────
+
+local function safeOnTouch(...)
+  local ok, err = pcall(onTouch, ...)
+  if not ok then logger.log("SYSTEM", "ERROR", "Touch error: " .. tostring(err)) end
+end
+
+local function safeOnKey(...)
+  local ok, err = pcall(onKey, ...)
+  if not ok then logger.log("SYSTEM", "ERROR", "Key error: " .. tostring(err)) end
+end
+
 -- ─── Draw ─────────────────────────────────────────────────────────────────
 
 local function draw()
@@ -307,26 +374,35 @@ end
 -- ─── Main Loop ────────────────────────────────────────────────────────────
 
 local function mainLoop()
-  local keyListen = event.listen("key_down", onKey)
+  local keyListen = event.listen("key_down", safeOnKey)
+  local touchListen = event.listen("touch", safeOnTouch)
 
   while _running do
     local now = os.clock()
 
-    -- Автополлинг
-    if (now - _last_poll) >= config.poll_interval then
-      pollAll()
-      _last_poll = now
-    end
+    local ok, err = pcall(function()
+      -- Автополлинг
+      if (now - _last_poll) >= config.poll_interval then
+        pollAll()
+        _last_poll = now
+      end
 
-    -- Перерисовка
-    if ui.dirty or (now - ui.last_draw) >= config.gui_refresh then
-      draw()
+      -- Перерисовка
+      if ui.dirty or (now - ui.last_draw) >= config.gui_refresh then
+        draw()
+      end
+    end)
+    
+    if not ok then
+      logger.log("SYSTEM", "ERROR", "Main loop error: " .. tostring(err))
+      ui.dirty = true
     end
 
     os.sleep(0.05)
   end
 
-  event.ignore("key_down", onKey)
+  event.ignore("key_down", safeOnKey)
+  event.ignore("touch", safeOnTouch)
 
   -- Восстановить терминал
   if component.isAvailable("gpu") then

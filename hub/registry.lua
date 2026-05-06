@@ -26,8 +26,9 @@
 --   }
 -- }
 
-local serial = require("serialization")
-local config = require("config")
+local serial     = require("serialization")
+local filesystem = require("filesystem")
+local config     = require("config")
 
 local registry = {}
 local _data = {}   -- keyed by planet name
@@ -54,10 +55,14 @@ local function stripRuntime(planets)
 end
 
 function registry.save()
-  local f = io.open(config.registry_file, "w")
-  if not f then return end
-  f:write(serial.serialize(stripRuntime(_data)))
-  f:close()
+  local tmp = config.registry_file .. ".tmp"
+  local f = io.open(tmp, "w")
+  if f then
+    f:write(serial.serialize(stripRuntime(_data)))
+    f:close()
+    if filesystem.exists(config.registry_file) then filesystem.remove(config.registry_file) end
+    filesystem.rename(tmp, config.registry_file)
+  end
 end
 
 function registry.load()
