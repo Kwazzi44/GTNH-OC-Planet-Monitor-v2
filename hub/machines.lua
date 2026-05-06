@@ -9,7 +9,7 @@ local machines = {}
 
 -- ─── GT методы для чтения статуса ────────────────────────────────────────
 
-local STATUS_METHODS = { "isMachineActive", "isActive" }
+local STATUS_METHODS = { "isMachineActive", "isActive", "isWorking", "hasWork" }
 
 local function readActive(proxy)
   for _, m in ipairs(STATUS_METHODS) do
@@ -121,7 +121,20 @@ function machines.getStatus(m)
 
   local active = readActive(proxy)
   if active == nil then
-    return false, "Cannot read status"
+    -- Fallback: parse sensor data
+    local s_ok, s_data = pcall(proxy.getSensorInformation)
+    if s_ok and type(s_data) == "table" then
+      active = false
+      for _, line in ipairs(s_data) do
+        -- Any progress means it's active
+        if line:match("Progress:") or line:match("Working:") then
+          active = true
+          break
+        end
+      end
+    else
+      return false, "Cannot read status"
+    end
   end
   return active, nil
 end

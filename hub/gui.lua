@@ -274,10 +274,12 @@ function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
     SY = SY + 2
     if st == "RING_DOWN" then
       g_set(SX, SY, "Ring is offline.", C.ring_down, C.bg)
-    elseif not sel_m.active then
-      g_set(SX, SY, "Machine is OFFLINE", C.warn, C.bg)
-      g_set(SX, SY+1, "[Enter] to restart", C.dim, C.bg)
     else
+      if not sel_m.active then
+        g_set(SX, SY, "Status: OFFLINE", C.warn, C.bg)
+        g_set(SX, SY+1, "[Enter] to restart", C.dim, C.bg)
+        SY = SY + 3
+      end
       if sensor_data then
         if type(sensor_data) == "table" then
           for _, line in ipairs(sensor_data) do
