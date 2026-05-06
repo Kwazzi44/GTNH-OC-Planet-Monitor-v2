@@ -103,7 +103,7 @@ local function navigate(sel, scroll, delta, count, visible)
 end
 
 local function setNotify(msg, color)
-  ui.notify = { msg = msg, color = color or 0xFFAA00, until_t = os.clock() + 3 }
+  ui.notify = { msg = msg, color = color or 0xFFAA00, until_t = computer.uptime() + 3 }
   ui.dirty  = true
 end
 
@@ -119,7 +119,6 @@ local function doRestartMachine()
   end
   local m = (p.machines or {})[ui.machine_sel]
   if not m then return end
-  if m.active then setNotify(m.name .. " already ACTIVE", 0x00DD55); return end
   local ok, msg = mch.restart(m)
   logger.log(p.name, m.name, "RESTART -> " .. (ok and "OK: " or "FAIL: ") .. msg)
   setNotify((ok and "[OK] " or "[FAIL] ") .. msg, ok and 0x00DD55 or 0xFF2244)

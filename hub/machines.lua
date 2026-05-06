@@ -121,15 +121,22 @@ function machines.getStatus(m)
 
   local active = readActive(proxy)
   if active == nil then
-    -- Fallback: parse sensor data
     local s_ok, s_data = pcall(proxy.getSensorInformation)
     if s_ok and type(s_data) == "table" then
       active = false
       for _, line in ipairs(s_data) do
-        -- Any progress means it's active
-        if line:match("Progress:") or line:match("Working:") then
-          active = true
-          break
+        local clean = line:gsub("§.", "")
+        if clean:match("^Progress:") then
+          -- Progress: 5 s / 8 s -> 5, 8
+          local p1, p2 = clean:match("Progress:%s*(%d+)%s*s?%s*/%s*(%d+)")
+          if p1 and p2 and (tonumber(p1) > 0 or tonumber(p2) > 0) then
+            active = true
+          end
+        elseif clean:match("^Efficiency:") or clean:match("Efficiency:") then
+          local eff = clean:match("Efficiency:%s*(%d+%.?%d*)")
+          if eff and tonumber(eff) > 0 then
+            active = true
+          end
         end
       end
     else
