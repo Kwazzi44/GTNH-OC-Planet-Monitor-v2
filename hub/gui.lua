@@ -284,10 +284,12 @@ function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
         if type(sensor_data) == "table" then
           for _, line in ipairs(sensor_data) do
             if SY < H - 1 then
+              -- Очищаем майнкрафтовские коды форматирования (§a, §r и т.д.)
+              local clean_line = line:gsub("§.", "")
               local col = C.text
-              if line:match("^Problems:") and not line:match(" 0$") then col = C.warn end
-              if line:match("^Progress: ") then col = C.ok end
-              g_set(SX, SY, pad(line, W - SX), col, C.bg)
+              if clean_line:match("^Problems:") and not clean_line:match(" 0$") then col = C.warn end
+              if clean_line:match("^Progress: ") then col = C.ok end
+              g_set(SX, SY, pad(clean_line, W - SX), col, C.bg)
               SY = SY + 1
             end
           end
