@@ -325,20 +325,41 @@ local function run()
   drawMainMenu(sel)
   
   while true do
-    local e, _, char, code = event.pull("key_down")
+    local ev = table.pack(event.pull())
+    local e = ev[1]
     
-    if code == 200 then -- Up
-      if sel > 1 then sel = sel - 1; drawMainMenu(sel) end
-    elseif code == 208 then -- Down
-      if sel < #MENU_ITEMS then sel = sel + 1; drawMainMenu(sel) end
-    elseif code == 28 then -- Enter
-      local res = MENU_ITEMS[sel].fn()
-      if res == "exit" then break end
-      -- Redraw full screen after returning
-      clear()
-      drawText(2, 2, "GTNH Planet Monitor", C.ok)
-      drawText(2, 3, "Setup Wizard", C.dim)
-      drawMainMenu(sel)
+    if e == "key_down" then
+      local code = ev[4]
+      if code == 200 then -- Up
+        if sel > 1 then sel = sel - 1; drawMainMenu(sel) end
+      elseif code == 208 then -- Down
+        if sel < #MENU_ITEMS then sel = sel + 1; drawMainMenu(sel) end
+      elseif code == 28 then -- Enter
+        local res = MENU_ITEMS[sel].fn()
+        if res == "exit" then break end
+        -- Redraw full screen after returning
+        clear()
+        drawText(2, 2, "GTNH Planet Monitor", C.ok)
+        drawText(2, 3, "Setup Wizard", C.dim)
+        drawMainMenu(sel)
+      end
+    elseif e == "touch" then
+      local tx, ty, tbtn = ev[3], ev[4], ev[5]
+      if tbtn == 0 and tx <= LEFT_W then
+        for i, _ in ipairs(MENU_ITEMS) do
+          if ty == 3 + (i * 2) then
+            sel = i
+            drawMainMenu(sel)
+            local res = MENU_ITEMS[sel].fn()
+            if res == "exit" then return end
+            clear()
+            drawText(2, 2, "GTNH Planet Monitor", C.ok)
+            drawText(2, 3, "Setup Wizard", C.dim)
+            drawMainMenu(sel)
+            break
+          end
+        end
+      end
     end
   end
   
