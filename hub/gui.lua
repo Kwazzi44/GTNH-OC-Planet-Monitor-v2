@@ -127,8 +127,6 @@ function gui.getSize() return W, H end
 -- @param sel      number  Индекс выбранной строки (1-based)
 -- @param scroll   number  Первая видимая строка (1-based)
 function gui.drawPlanetList(planets, sel, scroll)
-  g_fill(1, 1, W, H, " ", C.text, C.bg)
-
   local count = #planets
   drawHeader(
     "PLANET MULTIBLOCK MONITOR",
@@ -334,8 +332,6 @@ end
 -- @param lines   table   Строки лога из logger.getLines()
 -- @param scroll  number  Первая видимая строка (nil = прилипание к низу)
 function gui.drawLog(lines, scroll)
-  g_fill(1, 1, W, H, " ", C.text, C.log_bg)
-
   drawHeader("EVENT LOG", #lines .. " entries total")
 
   local LIST_Y = 4
