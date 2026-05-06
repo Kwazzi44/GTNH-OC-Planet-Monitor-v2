@@ -9,7 +9,7 @@
 -- Требует: Internet Card в компьютере
 
 -- ─── НАСТРОЙКА ────────────────────────────────────────────────────────────
-local REPO = "https://raw.githubusercontent.com/ТВОЙ_НИК/GTNH-OC-Planet-Monitor/main"
+local REPO = "https://raw.githubusercontent.com/Kwazzi44/GTNH-OC-Planet-Monitor/main"
 local INSTALL_DIR = "/"
 -- ──────────────────────────────────────────────────────────────────────────
 

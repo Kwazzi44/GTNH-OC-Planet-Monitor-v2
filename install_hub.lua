@@ -9,7 +9,7 @@
 
 -- ─── НАСТРОЙКА ────────────────────────────────────────────────────────────
 -- Замени на свой GitHub username и название репозитория:
-local REPO = "https://raw.githubusercontent.com/ТВОЙ_НИК/GTNH-OC-Planet-Monitor/main"
+local REPO = "https://raw.githubusercontent.com/Kwazzi44/GTNH-OC-Planet-Monitor/main"
 
 -- Куда устанавливать файлы (корень файловой системы OC):
 local INSTALL_DIR = "/"
