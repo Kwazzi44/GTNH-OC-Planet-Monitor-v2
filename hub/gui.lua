@@ -214,7 +214,7 @@ end
 -- @param planet   table   Запись планеты из registry
 -- @param sel      number  Индекс выбранной машины
 -- @param scroll   number  Первая видимая машина
-function gui.drawPlanetDetail(planet, sel, scroll)
+function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
   local st    = planet.status or "UNKNOWN"
   local scol  = STATUS_COLOR[st] or C.unknown
 
@@ -225,12 +225,16 @@ function gui.drawPlanetDetail(planet, sel, scroll)
 
   -- Column header
   local HY = 4
-  g_fill(1, HY, W, 1, " ", C.dim, C.header_bg)
+  g_fill(1, HY, 45, 1, " ", C.dim, C.header_bg)
   g_set( 2, HY, pad("#",    3),  C.dim, C.header_bg)
-  g_set( 5, HY, pad("Machine",  30), C.dim, C.header_bg)
-  g_set(36, HY, pad("Status",   12), C.dim, C.header_bg)
-  g_set(49, HY, "Action", C.dim, C.header_bg)
-  g_fill(1, HY+1, W, 1, string.rep("-", W), C.border, C.bg)
+  g_set( 5, HY, pad("Machine",  24), C.dim, C.header_bg)
+  g_set(30, HY, pad("Status",   15), C.dim, C.header_bg)
+  g_fill(1, HY+1, 45, 1, string.rep("-", 45), C.border, C.bg)
+
+  -- Right panel header
+  g_fill(47, HY, W-46, 1, " ", C.title, C.header_bg)
+  g_set(48, HY, "SENSOR DATA", C.title, C.header_bg)
+  g_fill(47, HY+1, W-46, 1, string.rep("-", W-46), C.border, C.bg)
 
   local LIST_Y = HY + 2
   local LIST_H = H - LIST_Y - 1
@@ -242,41 +246,64 @@ function gui.drawPlanetDetail(planet, sel, scroll)
     local idx = scroll + i
     local ry  = LIST_Y + i
     if idx > count then
-      g_fill(1, ry, W, 1, " ", C.text, C.bg)
+      g_fill(1, ry, 45, 1, " ", C.text, C.bg)
     else
       local m     = machines[idx]
       local isSel = (idx == sel)
       local bg    = isSel and C.sel_bg or C.bg
       local fg    = isSel and C.sel_fg or C.text
-      g_fill(1, ry, W, 1, " ", fg, bg)
+      g_fill(1, ry, 45, 1, " ", fg, bg)
 
       local mcol  = m.active and C.ok or C.ring_down
       local micon = m.active and ">" or "X"
 
       g_set(2, ry, pad(idx, 3), C.dim, bg)
-      g_set(5, ry, micon .. " " .. pad(m.name or "Unknown", 27), mcol, bg)
-      g_set(36, ry, pad(m.active and "ACTIVE" or (m.error or "OFFLINE"), 12), mcol, bg)
+      g_set(5, ry, micon .. " " .. pad(m.name or "Unknown", 21), mcol, bg)
+      g_set(30, ry, pad(m.active and "ACTIVE" or (m.error or "OFFLINE"), 15), mcol, bg)
+    end
+    -- Draw vertical separator
+    g_set(46, ry, "|", C.border, C.bg)
+  end
 
-      -- Action hint for selected offline machine
-      if isSel and not m.active then
-        if st == "RING_DOWN" then
-          g_set(49, ry, "Ring offline", C.ring_down, bg)
+  -- SENSOR PANEL RENDER
+  local SX = 48
+  local SY = LIST_Y
+  local sel_m = machines[sel]
+  if sel_m then
+    g_set(SX, SY, pad(sel_m.name, W - SX), C.title, C.bg)
+    SY = SY + 2
+    if st == "RING_DOWN" then
+      g_set(SX, SY, "Ring is offline.", C.ring_down, C.bg)
+    elseif not sel_m.active then
+      g_set(SX, SY, "Machine is OFFLINE", C.warn, C.bg)
+      g_set(SX, SY+1, "[Enter] to restart", C.dim, C.bg)
+    else
+      if sensor_data then
+        if type(sensor_data) == "table" then
+          for _, line in ipairs(sensor_data) do
+            if SY < H - 1 then
+              local col = C.text
+              if line:match("^Problems:") and not line:match(" 0$") then col = C.warn end
+              if line:match("^Progress: ") then col = C.ok end
+              g_set(SX, SY, pad(line, W - SX), col, C.bg)
+              SY = SY + 1
+            end
+          end
         else
-          g_set(49, ry, "[Enter: Restart]", C.partial, bg)
+          g_set(SX, SY, "Error reading sensors:", C.warn, C.bg)
+          g_set(SX, SY+1, pad(tostring(sensor_data), W - SX), C.dim, C.bg)
         end
+      else
+        g_set(SX, SY, "Fetching data...", C.dim, C.bg)
       end
     end
   end
 
   -- RING DOWN warning banner
   if st == "RING_DOWN" then
-    local wy = LIST_Y + math.min(count, LIST_H) + 1
-    if wy < H - 1 then
-      g_fill(1, wy, W, 1, " ", C.ring_down, C.bg)
-      g_set(2, wy,
-        "! Quantum Ring is OFFLINE — Manual intervention required on planet",
-        C.ring_down, C.bg)
-    end
+    local wy = H - 2
+    g_fill(1, wy, 45, 1, " ", C.ring_down, C.bg)
+    g_set(2, wy, pad("! RING OFFLINE !", 43), C.ring_down, C.bg)
   end
 
   -- Scroll arrows

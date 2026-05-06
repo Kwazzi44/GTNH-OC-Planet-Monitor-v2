@@ -29,6 +29,9 @@ local ui = {
   dirty         = true,
   notify        = nil,   -- { msg, color, until_t }
   last_draw     = 0,
+  sensor_data       = nil,
+  last_sensor_poll  = 0,
+  last_sensor_maddr = nil,
 }
 
 local _running    = true
@@ -321,7 +324,7 @@ local function draw()
   elseif ui.view == VIEW.DETAIL then
     local p = registry.get(ui.detail_planet)
     if p then
-      gui.drawPlanetDetail(p, ui.machine_sel, ui.machine_scroll)
+      gui.drawPlanetDetail(p, ui.machine_sel, ui.machine_scroll, ui.sensor_data)
     else
       ui.view = VIEW.PLANETS
     end
@@ -381,10 +384,26 @@ local function mainLoop()
     local now = os.clock()
 
     local ok, err = pcall(function()
-      -- Автополлинг
+      -- Автополлинг сети
       if (now - _last_poll) >= config.poll_interval then
         pollAll()
         _last_poll = now
+      end
+
+      -- Асинхронный поллинг сенсоров для выделенной машины (раз в 1 сек)
+      if ui.view == VIEW.DETAIL and ui.detail_planet then
+        local p = registry.get(ui.detail_planet)
+        if p and p.machines then
+          local m = p.machines[ui.machine_sel]
+          if m then
+            if m.adapter_addr ~= ui.last_sensor_maddr or (now - ui.last_sensor_poll) >= 1.0 then
+              ui.sensor_data = mch.getSensorData(m)
+              ui.last_sensor_maddr = m.adapter_addr
+              ui.last_sensor_poll = now
+              ui.dirty = true
+            end
+          end
+        end
       end
 
       -- Перерисовка

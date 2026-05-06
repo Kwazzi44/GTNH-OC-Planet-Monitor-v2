@@ -117,6 +117,19 @@ function machines.getStatus(m)
   return active, nil
 end
 
+--- Получить данные сенсоров машины
+-- @return table(string) или nil, err
+function machines.getSensorData(m)
+  if not m.adapter_addr then return nil, "No adapter address" end
+  local proxy = component.proxy(m.adapter_addr)
+  if not proxy then return nil, "Adapter missing" end
+  if not proxy.getSensorInformation then return nil, "No sensor API" end
+
+  local ok, data = pcall(proxy.getSensorInformation)
+  if not ok then return nil, tostring(data) end
+  return data
+end
+
 --- Перезапустить машину через Redstone
 -- rs_side = -1 означает "все стороны" (broadcast)
 -- @param m  table  Запись машины из registry
