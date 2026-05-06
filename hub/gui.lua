@@ -220,7 +220,6 @@ function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
 
   local h1 = tostring(planet.name or "?") .. "  [" .. tostring(STATUS_LABEL[st] or st) .. "]"
   local h2 = "Last seen: " .. timeAgo(planet.last_ok)
-  g_fill(1, 1, W, H, " ", C.text, C.bg)
   drawHeader(h1, h2)
 
   -- Column header
@@ -299,8 +298,14 @@ function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
         end
       else
         g_set(SX, SY, "Fetching data...", C.dim, C.bg)
+        SY = SY + 1
       end
     end
+  end
+
+  -- Clear remaining lines in the right panel
+  for y = SY, H - 1 do
+    g_fill(47, y, W - 46, 1, " ", C.text, C.bg)
   end
 
   -- RING DOWN warning banner
