@@ -58,7 +58,7 @@ end
 --- Сканировать все gt_machine компоненты в сети
 -- Возвращает список { addr, name, active }
 function machines.scanNetwork()
-  local GT_NAME_METHODS = { "getMachineName", "getName", "getBlockName" }
+  local GT_NAME_METHODS = { "getMachineName", "getName", "getBlockName", "getInventoryName", "getCustomName" }
   local result = {}
   for addr, compType in component.list("gt_machine") do
     local ok, proxy = pcall(component.proxy, addr)
@@ -72,7 +72,16 @@ function machines.scanNetwork()
           end
         end
       end
+    if name == "Unknown" and ok and proxy then
+      pcall(function()
+        local methods = {}
+        for k, _ in pairs(proxy) do table.insert(methods, k) end
+        require("logger").log("SYSTEM", "DEBUG", "Unknown machine " .. string.sub(addr,1,8) .. " methods: " .. table.concat(methods, ", "))
+      end)
     end
+
+    end
+
     local active = (ok and proxy) and readActive(proxy) or false
     table.insert(result, { addr = addr, name = name, active = active or false })
   end
