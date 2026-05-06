@@ -35,8 +35,8 @@ end
 
 local function download(url, dest)
   mkdirs(dest)
-  -- ?v=timestamp разбивает кэш GitHub CDN
-  local bust = "?v=" .. tostring(math.floor(os.time()))
+  -- ?v=random разбивает кэш GitHub CDN
+  local bust = "?v=" .. tostring(math.random(1000000, 9999999))
   local ok, err = pcall(function()
     local resp = internet.request(url .. bust)
     local f = assert(io.open(dest, "w"))
