@@ -237,9 +237,12 @@ end
 -- ─── Mouse Touch ────────────────────────────────────────────────────────────
 
 local function onTouch(_, _, x, y, button, playerName)
+  if ui.notify then
+    ui.notify = nil
+    ui.dirty = true
+    return
+  end
   if button ~= 0 then return end -- Only left click
-
-  local W, H = gui.getSize()
   
   -- Footer click (y == H)
   if y == H then
@@ -320,7 +323,7 @@ local function draw()
   end
 
   if ui.notify then
-    if os.clock() < ui.notify.until_t then
+    if computer.uptime() < ui.notify.until_t then
       gui.notify(ui.notify.msg, ui.notify.color)
     else
       ui.notify = nil; ui.dirty = true
@@ -328,7 +331,7 @@ local function draw()
   end
 
   ui.dirty    = false
-  ui.last_draw = os.clock()
+  ui.last_draw = computer.uptime()
 end
 
 -- ─── Init ────────────────────────────────────────────────────────────────
