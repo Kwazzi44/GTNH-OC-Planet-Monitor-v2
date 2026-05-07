@@ -38,6 +38,9 @@ local ui = {
 local _running    = true
 local _last_poll  = 0
 
+-- Предварительное объявление для разрешения кольцевых зависимостей
+local runSetup, safeOnKey, safeOnTouch
+
 -- ─── Polling ──────────────────────────────────────────────────────────────
 
 local function pollAll()
@@ -160,32 +163,7 @@ local function openDetail()
   ui.dirty          = true
 end
 
-local function runSetup()
-  if component.isAvailable("gpu") then
-    local gpu = component.gpu
-    gpu.setBackground(0x000000); gpu.setForeground(0xFFFFFF)
-    local w,h = gpu.getResolution()
-    gpu.fill(1,1,w,h," ")
-  end
-  -- Отключаем слушатели на время работы другого скрипта
-  event.ignore("key_down", safeOnKey)
-  event.ignore("touch", safeOnTouch)
-
-  local shell = require("shell")
-  local ok, err = pcall(shell.execute, "/home/hub/setup.lua")
-  if not ok then
-    io.write("[ERROR] Setup failed: " .. tostring(err) .. "\n")
-  end
-
-  -- Возвращаем слушатели
-  event.listen("key_down", safeOnKey)
-  event.listen("touch", safeOnTouch)
-
-  registry.load()
-  ui.dirty = true
-end
-
--- ─── Keyboard ─────────────────────────────────────────────────────────────
+-- ─── Keyboard & Mouse Handlers ──────────────────────────────────────────
 
 local function onKey(_, _, char, code)
   -- Q → выход (code 16 или Esc = 1)
@@ -250,8 +228,6 @@ local function onKey(_, _, char, code)
   end
 end
 
--- ─── Mouse Touch ────────────────────────────────────────────────────────────
-
 local function onTouch(_, _, x, y, button, playerName)
   if ui.notify then
     ui.notify = nil
@@ -308,17 +284,43 @@ local function onTouch(_, _, x, y, button, playerName)
   end
 end
 
--- ─── Error Wrappers ───────────────────────────────────────────────────────
-
-local function safeOnTouch(...)
+safeOnTouch = function(...)
   local ok, err = pcall(onTouch, ...)
   if not ok then logger.log("SYSTEM", "ERROR", "Touch error: " .. tostring(err)) end
 end
 
-local function safeOnKey(...)
+safeOnKey = function(...)
   local ok, err = pcall(onKey, ...)
   if not ok then logger.log("SYSTEM", "ERROR", "Key error: " .. tostring(err)) end
 end
+
+runSetup = function()
+  if component.isAvailable("gpu") then
+    local gpu = component.gpu
+    gpu.setBackground(0x000000); gpu.setForeground(0xFFFFFF)
+    local w,h = gpu.getResolution()
+    gpu.fill(1,1,w,h," ")
+  end
+  -- Отключаем слушатели на время работы другого скрипта
+  event.ignore("key_down", safeOnKey)
+  event.ignore("touch", safeOnTouch)
+
+  local shell = require("shell")
+  local ok, err = pcall(shell.execute, "/home/hub/setup.lua")
+  if not ok then
+    io.write("[ERROR] Setup failed: " .. tostring(err) .. "\n")
+  end
+
+  -- Возвращаем слушатели
+  event.listen("key_down", safeOnKey)
+  event.listen("touch", safeOnTouch)
+
+  registry.load()
+  ui.dirty = true
+end
+
+-- ─── Keyboard ─────────────────────────────────────────────────────────────
+
 
 -- ─── Draw ─────────────────────────────────────────────────────────────────
 
