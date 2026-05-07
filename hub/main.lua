@@ -362,6 +362,12 @@ local function init()
   end
   registry.load()
   logger.load()
+  
+  if config.lsc_address then
+    logger.log("SYSTEM", nil, "LSC Address Loaded: " .. string.sub(config.lsc_address, 1, 8))
+  else
+    logger.log("SYSTEM", nil, "LSC Address: NOT CONFIGURED")
+  end
 
   local planets = registry.getPlanetList()
   if #planets == 0 then

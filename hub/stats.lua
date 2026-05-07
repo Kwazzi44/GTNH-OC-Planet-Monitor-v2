@@ -55,6 +55,13 @@ function stats.update(lsc_addr)
       local getS = proxy.getStoredEU or proxy.getEUStored
       local getM = proxy.getEUCapacity or proxy.getEUMax
       
+      if not getS or not getM then
+        if not stats._debug_sent then
+          require("logger").log("STATS", nil, "LSC methods missing! addr=" .. string.sub(lsc_addr, 1, 8))
+          stats._debug_sent = true
+        end
+      end
+
       local s = getS and getS() or 0
       local m = getM and getM() or 1
       
