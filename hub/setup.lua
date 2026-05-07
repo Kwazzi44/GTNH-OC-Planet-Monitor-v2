@@ -427,4 +427,13 @@ local function run()
   gpu.fill(1, 1, W, H, " ")
 end
 
-run()
+local ok, err = pcall(run)
+if not ok then
+  gpu.setBackground(0x000000)
+  gpu.setForeground(0xFF0000)
+  gpu.fill(1, 1, W, H, " ")
+  gpu.set(1, 1, "FATAL ERROR IN SETUP:")
+  gpu.set(1, 3, tostring(err))
+  gpu.set(1, H, "Press any key to exit...")
+  require("event").pull("key_down")
+end
