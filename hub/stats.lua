@@ -52,8 +52,11 @@ function stats.update(lsc_addr)
   if lsc_addr then
     local ok, proxy = pcall(component.proxy, lsc_addr)
     if ok and proxy then
-      local s = proxy.getStoredEU and proxy.getStoredEU() or 0
-      local m = proxy.getEUCapacity and proxy.getEUCapacity() or 1
+      local getS = proxy.getStoredEU or proxy.getEUStored
+      local getM = proxy.getEUCapacity or proxy.getEUMax
+      
+      local s = getS and getS() or 0
+      local m = getM and getM() or 1
       
       local dt_eu = now_uptime - stats._last_eu_time
       if dt_eu >= 1.0 then

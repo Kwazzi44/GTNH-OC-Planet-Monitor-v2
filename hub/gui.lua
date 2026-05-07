@@ -13,22 +13,22 @@ local W, H = 80, 25
 -- ─── Color Palette ─────────────────────────────────────────────────────────
 
 local C = {
-  bg        = 0x000000,
-  header_bg = 0x111111,
-  sel_bg    = 0x333333,
-  sel_fg    = 0xFFFFFF,
-  text      = 0xCCCCCC,
-  dim       = 0x666666,
-  border    = 0x444444,
-  title     = 0xFFFFFF,
-  key       = 0xFFAA00,
-  key_bg    = 0x111111,
+  bg        = 0x002B36, -- Base03 (Background)
+  header_bg = 0x073642, -- Base02 (Slightly lighter bg)
+  sel_bg    = 0x073642, -- Base02 (Selection bg)
+  sel_fg    = 0x268BD2, -- Blue (Selection fg)
+  text      = 0x839496, -- Base0 (Primary text)
+  dim       = 0x586E75, -- Base01 (Dimmed text)
+  border    = 0x073642, -- Base02 (Border)
+  title     = 0x93A1A1, -- Base1 (Title text)
+  key       = 0xB58900, -- Yellow (Key hints)
+  key_bg    = 0x002B36, -- Base03
   
-  ok        = 0x00FF88,
-  warn      = 0xFFAA00,
-  ring_down = 0xFF4422,
-  unknown   = 0x888888,
-  partial   = 0x44AAFF
+  ok        = 0x859900, -- Green
+  warn      = 0xB58900, -- Yellow
+  ring_down = 0xDC322F, -- Red
+  unknown   = 0x586E75, -- Base01
+  partial   = 0x2AA198  -- Cyan
 }
 
 local STATUS_COLOR = {
