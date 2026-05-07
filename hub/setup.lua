@@ -65,14 +65,14 @@ local function clear()
   gpu.setBackground(C.bg)
 end
 
-local function header(txt)
-  drawText(LEFT_W + 3, 2, txt, C.title)
-end
-
 local function drawText(x, y, text, fg, bg)
   gpu.setForeground(fg or C.fg)
   gpu.setBackground(bg or C.bg)
   gpu.set(x, y, text)
+end
+
+local function header(txt)
+  drawText(LEFT_W + 3, 2, txt, C.title)
 end
 
 local function clearRight()
