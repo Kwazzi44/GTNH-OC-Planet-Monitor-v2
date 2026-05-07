@@ -17,7 +17,8 @@ end
 
 local function writeLine(line)
   table.insert(_lines, line)
-  while #_lines > config.log_max_lines do table.remove(_lines, 1) end
+  local max = config.log_max_lines or 100
+  while #_lines > max do table.remove(_lines, 1) end
   local f = io.open(config.log_file, "a")
   if f then f:write(line .. "\n"); f:close() end
 end
@@ -37,9 +38,10 @@ function logger.getLines() return _lines end
 function logger.load()
   local f = io.open(config.log_file, "r")
   if not f then return end
+  local max = config.log_max_lines or 100
   for line in f:lines() do table.insert(_lines, line) end
   f:close()
-  while #_lines > config.log_max_lines do table.remove(_lines, 1) end
+  while #_lines > max do table.remove(_lines, 1) end
 end
 
 return logger
