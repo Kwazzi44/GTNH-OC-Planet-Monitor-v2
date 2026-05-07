@@ -14,6 +14,7 @@ local registry = require("registry")
 local mch      = require("machines")
 local logger   = require("logger")
 local gui      = require("gui")
+local stats    = require("stats")
 
 -- ─── UI State ─────────────────────────────────────────────────────────────
 
@@ -33,6 +34,7 @@ local ui = {
   sensor_data       = nil,
   last_sensor_poll  = 0,
   last_sensor_maddr = nil,
+  lsc_addr          = nil, -- адрес лапотронника
 }
 
 local _running    = true
@@ -328,7 +330,7 @@ local function draw()
   local planets = registry.getPlanetList()
 
   if ui.view == VIEW.PLANETS then
-    gui.drawPlanetList(planets, ui.planet_sel, ui.planet_scroll)
+    gui.drawPlanetList(planets, ui.planet_sel, ui.planet_scroll, stats)
   elseif ui.view == VIEW.DETAIL then
     local p = registry.get(ui.detail_planet)
     if p then
@@ -392,6 +394,20 @@ local function mainLoop()
     local now = computer.uptime()
 
     local ok, err = pcall(function()
+      -- Обновление статистики (TPS, LSC)
+      if ui.view == VIEW.PLANETS then
+        -- Поиск LSC если еще не найден
+        if not ui.lsc_addr then
+          for addr, name in component.list("gt_machine") do
+            local p = component.proxy(addr)
+            if p and p.getStoredEU and p.getEUCapacity then
+              ui.lsc_addr = addr; break
+            end
+          end
+        end
+        stats.update(ui.lsc_addr)
+      end
+
       -- Автополлинг сети
       if (now - _last_poll) >= config.poll_interval then
         pollAll()
