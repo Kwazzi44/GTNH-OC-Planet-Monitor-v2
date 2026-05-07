@@ -1,5 +1,5 @@
 -- =============================================================================
--- hub/stats.lua — TPS and Energy (LSC) monitoring
+-- hub/stats.lua — Real-time TPS and LSC Monitoring
 -- =============================================================================
 
 local component = require("component")
@@ -14,23 +14,40 @@ local stats = {
     percent = 0
   },
   _last_uptime = computer.uptime(),
-  _last_realtime = os.time(),
+  _last_os_time = os.time(),
   _last_eu = 0,
-  _last_eu_time = computer.uptime()
+  _last_eu_time = computer.uptime(),
+  _tps_buffer = {20, 20, 20, 20, 20} -- для плавности
 }
 
 function stats.update(lsc_addr)
-  -- 1. Вычисление TPS
-  -- os.time() в OC идет со скоростью 72 тика в секунду (игровых), 
-  -- но мы можем измерить дрейф uptime (реальные сек)
   local now_uptime = computer.uptime()
-  local now_real = os.time()
+  local now_os     = os.time()
   
-  -- В норме за 1 реальную секунду (uptime) проходит 1000/20 * 72... нет.
-  -- Проще: замеряем сколько реальных секунд занимает один игровой тик.
-  -- Но в GTNH проще всего замерять через разницу uptime между вызовами.
-  -- Мы будем использовать усредненное значение.
-  
+  -- 1. Вычисление TPS
+  local dt_real = now_uptime - stats._last_uptime
+  if dt_real >= 1.0 then -- обновляем TPS раз в секунду
+    -- В Minecraft 1 час игрового времени = 1000 тиков.
+    -- Функция os.time() возвращает игровое время в часах (от 0 до 24).
+    local dt_os = now_os - stats._last_os_time
+    if dt_os < 0 then dt_os = dt_os + 24 end -- переход через полночь
+    
+    -- Вычисляем TPS: (прошедшие тики / прошедшее реальное время)
+    -- dt_os * 1000 — это количество тиков
+    local current_tps = (dt_os * 1000) / dt_real
+    if current_tps > 20 then current_tps = 20 end
+    
+    -- Сглаживание (среднее по буферу)
+    table.remove(stats._tps_buffer, 1)
+    table.insert(stats._tps_buffer, current_tps)
+    local sum = 0
+    for _, v in ipairs(stats._tps_buffer) do sum = sum + v end
+    stats.tps = sum / #stats._tps_buffer
+    
+    stats._last_uptime = now_uptime
+    stats._last_os_time = now_os
+  end
+
   -- 2. Опрос Энергии (LSC)
   if lsc_addr then
     local ok, proxy = pcall(component.proxy, lsc_addr)
@@ -38,9 +55,9 @@ function stats.update(lsc_addr)
       local s = proxy.getStoredEU and proxy.getStoredEU() or 0
       local m = proxy.getEUCapacity and proxy.getEUCapacity() or 1
       
-      local dt = now_uptime - stats._last_eu_time
-      if dt >= 1.0 then -- замеряем разницу раз в секунду
-        stats.energy.diff = (s - stats._last_eu) / dt
+      local dt_eu = now_uptime - stats._last_eu_time
+      if dt_eu >= 1.0 then
+        stats.energy.diff = (s - stats._last_eu) / dt_eu
         stats._last_eu = s
         stats._last_eu_time = now_uptime
       end
@@ -50,12 +67,6 @@ function stats.update(lsc_addr)
       stats.energy.percent = (s / m) * 100
     end
   end
-  
-  -- Оценка TPS (упрощенно)
-  -- Если сервер лагает, os.sleep(0.05) длится дольше 0.05 сек.
-  -- Но для точного TPS нужен внешний таймер или замер через os.time()
-  -- Оставим пока заглушку или простую логику.
-  stats.tps = 20.0 -- TODO: Реальный замер через os.clock дрейф
 end
 
 return stats

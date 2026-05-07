@@ -1,5 +1,5 @@
 -- =============================================================================
--- hub/gui.lua — Premium GUI with Two-Column Layout and Stats Panel
+-- hub/gui.lua — Polished GUI: Classic List + Bottom Stats
 -- =============================================================================
 
 local component = require("component")
@@ -67,6 +67,23 @@ local function pad(str, len)
   return str .. string.rep(" ", len - #str)
 end
 
+local function format_energy(v)
+  local abs_v = math.abs(v)
+  if abs_v >= 1e12 then return string.format("%.1fT", v / 1e12) end
+  if abs_v >= 1e9  then return string.format("%.1fG", v / 1e9) end
+  if abs_v >= 1e6  then return string.format("%.1fM", v / 1e6) end
+  if abs_v >= 1e3  then return string.format("%.1fk", v / 1e3) end
+  return string.format("%d", v)
+end
+
+local function timeAgo(t)
+  if not t then return "never" end
+  local sec = computer.uptime() - t
+  if sec < 0 then return "active" end
+  if sec < 60 then return math.floor(sec) .. "s" end
+  return math.floor(sec/60) .. "m"
+end
+
 local function drawHeader(title, subtitle)
   g_fill(1, 1, W, 1, " ", C.title, C.header_bg)
   g_set(math.floor((W - #title)/2), 1, title, C.title, C.header_bg)
@@ -90,28 +107,6 @@ local function drawFooter(keys)
   end
 end
 
-local function format_energy(v)
-  local abs_v = math.abs(v)
-  if abs_v >= 1e12 then return string.format("%.1fT", v / 1e12) end
-  if abs_v >= 1e9  then return string.format("%.1fG", v / 1e9) end
-  if abs_v >= 1e6  then return string.format("%.1fM", v / 1e6) end
-  if abs_v >= 1e3  then return string.format("%.1fk", v / 1e3) end
-  return string.format("%d", v)
-end
-
-local function timeAgo(t)
-  if not t then return "never" end
-  local diff = (computer.uptime() - (t / 72)) -- очень грубо, если t это os.time
-  -- В данном скрипте мы используем computer.uptime() для last_ok в некоторых местах
-  -- Если t > uptime, значит это os.time.
-  if t > computer.uptime() then
-     return "active"
-  end
-  local sec = computer.uptime() - t
-  if sec < 60 then return math.floor(sec) .. "s" end
-  return math.floor(sec/60) .. "m"
-end
-
 -- ─── API ───────────────────────────────────────────────────────────────────
 
 function gui.init()
@@ -123,9 +118,16 @@ function gui.init()
   return true
 end
 
+function gui.clear()
+  g_fill(1, 1, W, H, " ", C.text, C.bg)
+end
+
 function gui.getSize() return W, H end
 
 function gui.drawPlanetList(planets, sel, scroll, stats)
+  -- Очистка области списка и инфо, чтобы не было артефактов
+  g_fill(1, 4, W, H-4, " ", C.text, C.bg)
+
   local count = #planets
   drawHeader(
     "PLANET MULTIBLOCK MONITOR",
@@ -133,90 +135,75 @@ function gui.drawPlanetList(planets, sel, scroll, stats)
   )
 
   local HY = 4
-  local list_h = 10 
-  local col_w = math.floor(W / 2) - 1
-
-  -- Headers
+  -- Заголовки
   g_fill(1, HY, W, 1, " ", C.dim, C.header_bg)
-  g_set( 2, HY, "# Planet      Status", C.dim, C.header_bg)
-  g_set(col_w + 4, HY, "# Planet      Status", C.dim, C.header_bg)
+  g_set( 2, HY, pad("#", 3),  C.dim, C.header_bg)
+  g_set( 6, HY, pad("Planet", 15), C.dim, C.header_bg)
+  g_set(22, HY, pad("Status", 10), C.dim, C.header_bg)
+  g_set(34, HY, pad("Last Seen", 10), C.dim, C.header_bg)
+  g_set(46, HY, pad("Machines", 10), C.dim, C.header_bg)
   g_fill(1, HY+1, W, 1, string.rep("-", W), C.border, C.bg)
 
   local LIST_Y = HY + 2
+  local LIST_H = 13 -- увеличили список
   scroll = scroll or 1
 
-  for i = 0, list_h - 1 do
+  for i = 0, LIST_H - 1 do
+    local idx = scroll + i
     local ry = LIST_Y + i
-    
-    -- Left Col
-    local idx1 = scroll + i
-    if idx1 <= count then
-      local p = planets[idx1]
-      local isSel = (idx1 == sel)
+    if idx <= count then
+      local p = planets[idx]
+      local isSel = (idx == sel)
       local bg = isSel and C.sel_bg or C.bg
       local fg = isSel and C.sel_fg or C.text
       local st = p.status or "UNKNOWN"
       local scol = STATUS_COLOR[st] or C.unknown
       
-      g_set(2, ry, string.format("%2d ", idx1), C.dim, bg)
-      g_set(5, ry, pad(p.name or "?", 11), fg, bg)
-      g_set(17, ry, pad(STATUS_LABEL[st] or st, 10), scol, bg)
-      if isSel then g_fill(1, ry, 1, 1, " ", fg, bg); g_fill(col_w+1, ry, 1, 1, " ", fg, bg) end
-    else
-      g_fill(1, ry, col_w, 1, " ", C.text, C.bg)
-    end
+      local total, active = 0, 0
+      for _, m in ipairs(p.machines or {}) do
+        total = total + 1
+        if m.active then active = active + 1 end
+      end
+      local mtext = total > 0 and (active .. "/" .. total) or "—"
 
-    g_set(col_w + 2, ry, "│", C.border, C.bg)
-
-    -- Right Col
-    local idx2 = scroll + i + list_h
-    if idx2 <= count then
-      local p = planets[idx2]
-      local isSel = (idx2 == sel)
-      local bg = isSel and C.sel_bg or C.bg
-      local fg = isSel and C.sel_fg or C.text
-      local st = p.status or "UNKNOWN"
-      local scol = STATUS_COLOR[st] or C.unknown
-      
-      g_set(col_w + 4, ry, string.format("%2d ", idx2), C.dim, bg)
-      g_set(col_w + 7, ry, pad(p.name or "?", 11), fg, bg)
-      g_set(col_w + 19, ry, pad(STATUS_LABEL[st] or st, 10), scol, bg)
-    else
-      g_fill(col_w + 3, ry, W - col_w - 2, 1, " ", C.text, C.bg)
+      g_fill(1, ry, W, 1, " ", fg, bg)
+      g_set(2, ry, string.format("%2d", idx), C.dim, bg)
+      g_set(6, ry, pad(p.name or "?", 15), fg, bg)
+      g_set(22, ry, pad(STATUS_LABEL[st] or st, 11), scol, bg)
+      g_set(34, ry, pad(timeAgo(p.last_ok), 11), C.dim, bg)
+      g_set(46, ry, pad(mtext, 11), C.ok, bg)
     end
   end
 
   -- Stats Panel
-  local STAT_Y = LIST_Y + list_h + 1
-  g_fill(1, STAT_Y - 1, W, 1, string.rep("═", W), C.border, C.bg)
+  local STAT_Y = H - 4
+  g_fill(1, STAT_Y, W, 1, string.rep("═", W), C.border, C.bg)
   
   -- Left: Server
-  g_set(2, STAT_Y, "SERVER STATUS", C.title, C.bg)
-  g_set(2, STAT_Y + 1, "TPS: ", C.dim, C.bg)
+  g_set(2, STAT_Y + 1, "SERVER: ", C.dim, C.bg)
   if stats and stats.tps then
     local tps_c = (stats.tps > 18) and C.ok or (stats.tps > 15 and C.partial or C.ring_down)
-    g_set(7, STAT_Y + 1, string.format("%.1f", stats.tps), tps_c, C.bg)
-  else
-    g_set(7, STAT_Y + 1, "20.0", C.ok, C.bg) -- default
+    g_set(10, STAT_Y + 1, string.format("TPS %.1f", stats.tps), tps_c, C.bg)
   end
 
   -- Right: Energy
-  g_set(col_w + 4, STAT_Y, "ENERGY STORAGE (LSC)", C.title, C.bg)
+  local col2 = 35
+  g_set(col2, STAT_Y + 1, "ENERGY: ", C.dim, C.bg)
   if stats and stats.energy and stats.energy.max > 0 then
     local e = stats.energy
     local e_color = e.percent > 50 and C.ok or (e.percent > 20 and C.partial or C.ring_down)
-    g_set(col_w + 4, STAT_Y + 1, "Stored: ", C.dim, C.bg)
-    g_set(col_w + 12, STAT_Y + 1, format_energy(e.stored) .. " EU (" .. math.floor(e.percent) .. "%)", e_color, C.bg)
-    g_set(col_w + 4, STAT_Y + 2, "Flow:   ", C.dim, C.bg)
+    g_set(col2 + 8, STAT_Y + 1, format_energy(e.stored) .. " EU (" .. math.floor(e.percent) .. "%)", e_color, C.bg)
+    
     local diff_c = e.diff >= 0 and C.ok or C.ring_down
-    g_set(col_w + 12, STAT_Y + 2, (e.diff >= 0 and "+" or "") .. format_energy(e.diff * 20) .. " EU/sec", diff_c, C.bg)
+    g_set(col2 + 8, STAT_Y + 2, (e.diff >= 0 and "+" or "") .. format_energy(e.diff / 20) .. " EU/t", diff_c, C.bg)
   else
-    g_set(col_w + 4, STAT_Y + 1, "LSC not configured", C.dim, C.bg)
+    g_set(col2 + 8, STAT_Y + 1, "LSC not found", C.dim, C.bg)
   end
 
   drawFooter({
     {"Up/Dn", "Navigate"},
     {"Enter", "Details"},
+    {"A",     "RestartAll"},
     {"F3",    "Refresh"},
     {"F4",    "Log"},
     {"F1",    "Setup"},
@@ -225,6 +212,8 @@ function gui.drawPlanetList(planets, sel, scroll, stats)
 end
 
 function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
+  g_fill(1, 4, W, H-4, " ", C.text, C.bg)
+
   local st    = planet.status or "UNKNOWN"
   local scol  = STATUS_COLOR[st] or C.unknown
 
@@ -232,7 +221,9 @@ function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
 
   local HY = 4
   g_fill(1, HY, 45, 1, " ", C.dim, C.header_bg)
-  g_set( 2, HY, "# Machine            Status", C.dim, C.header_bg)
+  g_set( 2, HY, pad("#",    3),  C.dim, C.header_bg)
+  g_set( 5, HY, pad("Machine",  24), C.dim, C.header_bg)
+  g_set(30, HY, pad("Status",   15), C.dim, C.header_bg)
   g_fill(1, HY+1, 45, 1, string.rep("-", 45), C.border, C.bg)
 
   g_fill(47, HY, W-46, 1, " ", C.title, C.header_bg)
@@ -247,9 +238,7 @@ function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
   for i = 0, LIST_H - 1 do
     local idx = scroll + i
     local ry  = LIST_Y + i
-    if idx > #machines then
-      g_fill(1, ry, 45, 1, " ", C.text, C.bg)
-    else
+    if idx <= #machines then
       local m = machines[idx]
       local isSel = (idx == sel)
       local bg = isSel and C.sel_bg or C.bg
@@ -258,34 +247,27 @@ function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
       local mst = m.active and "ACTIVE" or (m.error or "OFFLINE")
 
       g_set(1, ry, isSel and ">" or " ", fg, bg)
-      g_set(2, ry, string.format("%2d ", idx), C.dim, bg)
+      g_set(2, ry, string.format("%2d", idx), C.dim, bg)
       g_set(5, ry, pad(m.name or "?", 24), fg, bg)
       g_set(30, ry, pad(mst, 15), mcol, bg)
     end
     g_set(46, ry, "│", C.border, C.bg)
   end
 
-  -- Sensor data
   if sensor_data then
     for i = 1, LIST_H do
       local line = sensor_data[i]
       if line then
         g_set(48, LIST_Y + i - 1, pad(line:gsub("§.", ""), W - 49), C.text, C.bg)
-      else
-        g_fill(48, LIST_Y + i - 1, W - 49, 1, " ", C.text, C.bg)
       end
     end
   end
 
-  drawFooter({
-    {"Backspace", "Back"},
-    {"Enter", "Restart"},
-    {"A", "Restart All"},
-    {"Q", "Quit"}
-  })
+  drawFooter({{"Backspace", "Back"}, {"Enter", "Restart"}, {"A", "Restart All"}, {"Q", "Quit"}})
 end
 
 function gui.drawLog(lines, scroll)
+  g_fill(1, 4, W, H-4, " ", C.text, C.bg)
   drawHeader("SYSTEM LOG")
   local LIST_Y = 4
   local LIST_H = H - LIST_Y - 1
@@ -297,8 +279,6 @@ function gui.drawLog(lines, scroll)
     local ry = LIST_Y + i
     if idx <= count then
       g_set(2, ry, pad(lines[idx] or "", W - 3), C.text, C.bg)
-    else
-      g_fill(1, ry, W, 1, " ", C.text, C.bg)
     end
   end
   drawFooter({{"Backspace", "Back"}, {"Q", "Quit"}})
