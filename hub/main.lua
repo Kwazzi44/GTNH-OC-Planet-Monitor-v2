@@ -44,6 +44,7 @@ local function pollAll()
   for pname, planet in pairs(registry.getAll()) do
     local all_missing = (#planet.machines > 0)
     local any_offline = false
+    local any_problem = false
     local prev_status = planet.status
 
     for _, m in ipairs(planet.machines) do
@@ -53,11 +54,15 @@ local function pollAll()
       m.error  = err
 
       if err == "RING_DOWN" then
-        -- компонент полностью исчез из OC-сети
-        -- all_missing остаётся true
+        -- компонент полностью исчез из OC-сети, all_missing остаётся true
       else
-        all_missing = false   -- компонент виден в сети, кольцо цело
+        all_missing = false   -- компонент виден в сети, значит кольцо цело
       end
+
+      if err == "MAINTENANCE" then
+        any_problem = true
+      end
+
       if not active then
         any_offline = true
       end
@@ -76,6 +81,8 @@ local function pollAll()
       new_status = "RING_DOWN"
     elseif any_offline then
       new_status = "PARTIAL"
+    elseif any_problem then
+      new_status = "MAINTENANCE"
     else
       new_status = "OK"
       planet.last_ok = os.time()

@@ -39,6 +39,7 @@ local STATUS_COLOR = {
   PARTIAL   = C.partial,
   RING_DOWN = C.ring_down,
   UNKNOWN   = C.unknown,
+  MAINTENANCE = C.warn,
 }
 
 local STATUS_LABEL = {
@@ -46,6 +47,7 @@ local STATUS_LABEL = {
   PARTIAL   = "PARTIAL",
   RING_DOWN = "RING DOWN",
   UNKNOWN   = "UNKNOWN",
+  MAINTENANCE = "PROBLEM",
 }
 
 -- ─── GPU helpers ──────────────────────────────────────────────────────────
@@ -186,6 +188,8 @@ function gui.drawPlanetList(planets, sel, scroll)
         hint, hcol = "[!] Manual needed", C.ring_down
       elseif st == "PARTIAL" then
         hint, hcol = "[*] Can restart", C.partial
+      elseif st == "MAINTENANCE" then
+        hint, hcol = "[!] Fix machine", C.warn
       end
 
       -- Draw continuous row to prevent flicker
@@ -260,11 +264,18 @@ function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
 
       local mcol  = m.active and C.ok or C.ring_down
       local micon = m.active and ">" or "X"
+      local mst   = m.active and "ACTIVE" or (m.error or "OFFLINE")
+
+      if m.error == "MAINTENANCE" then
+        mcol = C.warn
+        micon = "!"
+        mst = "PROBLEM"
+      end
 
       g_set(1, ry, " ", C.dim, bg)
       g_set(2, ry, pad(idx, 3), C.dim, bg)
       g_set(5, ry, micon .. " " .. pad(m.name or "Unknown", 23), mcol, bg)
-      g_set(30, ry, pad(m.active and "ACTIVE" or (m.error or "OFFLINE"), 16), mcol, bg)
+      g_set(30, ry, pad(mst, 16), mcol, bg)
     end
     -- Draw vertical separator
     g_set(46, ry, "|", C.border, C.bg)

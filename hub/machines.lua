@@ -120,29 +120,43 @@ function machines.getStatus(m)
   end
 
   local active = readActive(proxy)
-  if active == nil then
-    local s_ok, s_data = pcall(proxy.getSensorInformation)
-    if s_ok and type(s_data) == "table" then
-      active = false
-      for _, line in ipairs(s_data) do
-        local clean = line:gsub("§.", "")
+  local has_problem = false
+
+  -- Проверяем сенсоры на наличие проблем (Maintenance)
+  local s_ok, s_data = pcall(proxy.getSensorInformation)
+  if s_ok and type(s_data) == "table" then
+    for _, line in ipairs(s_data) do
+      local clean = line:gsub("§.", "") -- убираем цветовые коды
+      
+      -- Ищем "Problems: X"
+      local prob_count = clean:match("Problems:%s*(%d+)")
+      if prob_count and tonumber(prob_count) > 0 then
+        has_problem = true
+      end
+
+      -- Если active еще не определен (nil), пробуем вытащить его из прогресса
+      if active == nil then
         if clean:match("^Progress:") then
-          -- Progress: 5 s / 8 s -> 5, 8
           local p1, p2 = clean:match("Progress:%s*(%d+)%s*s?%s*/%s*(%d+)")
           if p1 and p2 and (tonumber(p1) > 0 or tonumber(p2) > 0) then
             active = true
           end
-        elseif clean:match("^Efficiency:") or clean:match("Efficiency:") then
+        elseif clean:match("Efficiency:") then
           local eff = clean:match("Efficiency:%s*(%d+%.?%d*)")
           if eff and tonumber(eff) > 0 then
             active = true
           end
         end
       end
-    else
-      return false, "Cannot read status"
     end
   end
+
+  if active == nil then active = false end
+
+  if has_problem then
+    return active, "MAINTENANCE" -- Машина работает, но есть проблемы
+  end
+
   return active, nil
 end
 
