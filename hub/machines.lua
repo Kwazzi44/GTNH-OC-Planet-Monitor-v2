@@ -146,8 +146,8 @@ function machines.getStatus(m)
           if eff and tonumber(eff) > 0 then
             active = true
           end
-        elseif clean:match("EU/t required:") then
-          local eut = clean:match("EU/t required:%s*([%d,]+)")
+        elseif clean:match("EU/t:") or clean:match("EU/t required:") then
+          local eut = clean:match("EU/t:?%s*([%d,]+)") or clean:match("EU/t required:%s*([%d,]+)")
           if eut then
             eut = eut:gsub(",", "") -- убираем запятые из чисел
             if tonumber(eut) and tonumber(eut) > 0 then active = true end
