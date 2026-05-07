@@ -55,15 +55,31 @@ function stats.update(lsc_addr)
       local getS = proxy.getStoredEU or proxy.getEUStored
       local getM = proxy.getEUCapacity or proxy.getEUMax
       
-      if not getS or not getM then
-        if not stats._debug_sent then
-          require("logger").log("STATS", nil, "LSC methods missing! addr=" .. string.sub(lsc_addr, 1, 8))
-          stats._debug_sent = true
+      local s, m = 0, 0
+      
+      if getS and getM then
+        s = getS()
+        m = getM()
+      elseif proxy.getSensorInformation then
+        -- Парсим из текстовых строк сенсора
+        local info = proxy.getSensorInformation()
+        for _, line in ipairs(info) do
+          -- Ищем "EU Stored: 1,234,567 EU"
+          local stored = line:match("EU Stored:%s*([%d,%.]+)")
+          if stored then s = tonumber(stored:gsub("[,%.]", "")) or s end
+          
+          -- Ищем "Total Capacity: 1,234,567 EU"
+          local cap = line:match("Total Capacity:%s*([%d,%.]+)")
+          if cap then m = tonumber(cap:gsub("[,%.]", "")) or m end
         end
       end
 
-      local s = getS and getS() or 0
-      local m = getM and getM() or 1
+      if m == 0 then
+        if not stats._debug_sent then
+          require("logger").log("STATS", nil, "LSC: No data found in sensors!")
+          stats._debug_sent = true
+        end
+      end
       
       local dt_eu = now_uptime - stats._last_eu_time
       if dt_eu >= 1.0 then
