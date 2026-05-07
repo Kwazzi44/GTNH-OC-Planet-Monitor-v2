@@ -134,9 +134,9 @@ function machines.getStatus(m)
         has_problem = true
       end
 
-      -- Если active еще не определен (nil), пробуем вытащить его из прогресса
+      -- Если active еще не определен (nil), пробуем вытащить его из данных сенсора
       if active == nil then
-        if clean:match("^Progress:") then
+        if clean:match("Progress:") then
           local p1, p2 = clean:match("Progress:%s*(%d+)%s*s?%s*/%s*(%d+)")
           if p1 and p2 and (tonumber(p1) > 0 or tonumber(p2) > 0) then
             active = true
@@ -146,6 +146,15 @@ function machines.getStatus(m)
           if eff and tonumber(eff) > 0 then
             active = true
           end
+        elseif clean:match("EU/t required:") then
+          local eut = clean:match("EU/t required:%s*([%d,]+)")
+          if eut then
+            eut = eut:gsub(",", "") -- убираем запятые из чисел
+            if tonumber(eut) and tonumber(eut) > 0 then active = true end
+          end
+        elseif clean:match("%d+L/s") or clean:match("%d+%s*L/s") then
+          -- Если есть выход в литрах в секунду (например, 1000L/s)
+          active = true
         end
       end
     end
