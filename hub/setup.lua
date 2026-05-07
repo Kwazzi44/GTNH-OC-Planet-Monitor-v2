@@ -33,6 +33,28 @@ local C = {
   ok       = 0x55FF55,
 }
 
+local config = {}
+local function load_config()
+  if require("filesystem").exists("/home/hub/config.lua") then
+    config = dofile("/home/hub/config.lua")
+  end
+end
+
+local function save_config()
+  local f = io.open("/home/hub/config.lua", "w")
+  if f then
+    f:write("-- GTNH Planet Monitor Config\n")
+    f:write("local config = {}\n\n")
+    f:write("config.poll_interval = " .. tostring(config.poll_interval or 10) .. "\n")
+    f:write("config.lsc_address   = " .. (config.lsc_address and ("\"" .. config.lsc_address .. "\"") or "nil") .. "\n")
+    f:write("config.gui_refresh   = 0.5\n")
+    f:write("config.registry_file = \"/home/planet_registry.json\"\n")
+    f:write("config.log_file      = \"/home/planet_log.txt\"\n\n")
+    f:write("return config\n")
+    f:close()
+  end
+end
+
 local function clear()
   gpu.setBackground(C.bg)
   gpu.setForeground(C.fg)
@@ -41,6 +63,10 @@ local function clear()
   gpu.setBackground(C.border)
   gpu.fill(LEFT_W + 1, 1, 1, H, " ")
   gpu.setBackground(C.bg)
+end
+
+local function header(txt)
+  drawText(LEFT_W + 3, 2, txt, C.title)
 end
 
 local function drawText(x, y, text, fg, bg)
@@ -148,6 +174,48 @@ local function viewScan()
   end
 end
 
+local function setup_lsc()
+  clearRight()
+  header("CONFIGURE ENERGY MONITOR (LSC)")
+  local rx = LEFT_W + 3
+  
+  local candidates = {}
+  for addr, name in component.list() do
+    local is_reg = false
+    for _, p in ipairs(registry.getPlanetList()) do
+      for _, m in ipairs(p.machines or {}) do
+        if m.adapter_addr == addr then is_reg = true; break end
+      end
+    end
+    
+    if not is_reg and addr ~= component.gpu.address and addr ~= component.screen.address then
+      table.insert(candidates, {addr = addr, name = name})
+    end
+  end
+
+  if #candidates == 0 then
+    drawText(rx, 4, "No available adapters found.", C.warn)
+    drawText(rx, 5, "Press Enter to return...")
+    while true do local _,_,_,c = event.pull("key_down") if c == 28 then break end end
+    return
+  end
+
+  drawText(rx, 4, "Select the adapter for LSC:", C.title)
+  for i, c in ipairs(candidates) do
+    drawText(rx, 5+i, string.format("%d. %s", i, string.sub(c.addr, 1, 8)))
+  end
+  
+  local ans = readInput(rx, 6+#candidates, "Selection (0 to cancel) > ", "")
+  local idx = tonumber(ans)
+  
+  if idx and idx > 0 and idx <= #candidates then
+    config.lsc_address = candidates[idx].addr
+    save_config()
+    drawText(rx, 8+#candidates, "[OK] LSC bound!", C.ok)
+    os.sleep(1)
+  end
+end
+
 local function viewDatabase()
   local rx = LEFT_W + 3
   local planets = registry.getPlanetList()
@@ -182,7 +250,7 @@ local function viewDatabase()
     end
     gpu.setBackground(C.bg)
     
-    drawText(rx, H-2, "[Enter/Right] Select Planet  [Del] Delete  [B/Left] Back", C.dim)
+    drawText(rx, H-2, "[Enter] Select  [Del] Delete  [B] Back", C.dim)
     
     local action = nil
     local ev = table.pack(event.pull())
@@ -192,17 +260,9 @@ local function viewDatabase()
       local code = ev[4]
       if code == 200 then action = "up"
       elseif code == 208 then action = "down"
-      elseif code == 14 or code == 1 or code == 203 or code == 48 then action = "back" -- Backspace, Esc, Left, B
+      elseif code == 14 or code == 1 or code == 48 then action = "back"
       elseif code == 211 then action = "delete"
-      elseif code == 28 or code == 205 then action = "enter" -- Enter, Right
-      end
-    elseif e == "touch" then
-      local tx, ty, tbtn = ev[3], ev[4], ev[5]
-      if tbtn == 0 and tx >= rx then
-        if ty >= 4 and ty <= 3 + #planets then
-          sel_p = ty - 3
-          action = "enter"
-        end
+      elseif code == 28 then action = "enter"
       end
     end
     
@@ -211,7 +271,7 @@ local function viewDatabase()
     elseif action == "back" then return
     elseif action == "delete" then
       local p = planets[sel_p]
-      drawText(rx, H-4, "Are you sure you want to delete planet " .. p.name .. "? (y/n)", C.warn)
+      drawText(rx, H-4, "Delete " .. p.name .. "? (y/n)", C.warn)
       local ans = readInput(rx, H-3, "> ", "")
       if ans:lower() == "y" then
         registry.removePlanet(p.name)
@@ -219,7 +279,6 @@ local function viewDatabase()
         if sel_p > #planets then sel_p = math.max(1, #planets) end
       end
     elseif action == "enter" then
-      -- Submenu for machines
       local p = planets[sel_p]
       local sel_m = 1
       local in_machines = true
@@ -243,7 +302,7 @@ local function viewDatabase()
           end
         end
         gpu.setBackground(C.bg)
-        drawText(rx, H-2, "[R]ename  [Del]elete  [C]hange Adapter  [B/Left] Back", C.dim)
+        drawText(rx, H-2, "[R]ename  [Del] Delete  [B] Back", C.dim)
         
         local maction = nil
         local mev = table.pack(event.pull())
@@ -253,17 +312,9 @@ local function viewDatabase()
           local mcode = mev[4]
           if mcode == 200 then maction = "up"
           elseif mcode == 208 then maction = "down"
-          elseif mcode == 1 or mcode == 14 or mcode == 203 or mcode == 48 then maction = "back" -- Esc, Backspace, Left, B
-          elseif mcode == 19 then maction = "rename" -- R
-          elseif mcode == 211 then maction = "delete" -- Delete
-          elseif mcode == 46 then maction = "change" -- C
-          end
-        elseif me == "touch" then
-          local tx, ty, tbtn = mev[3], mev[4], mev[5]
-          if tbtn == 0 and tx >= rx then
-            if ty >= 4 and ty <= 3 + #(p.machines or {}) then
-              sel_m = ty - 3
-            end
+          elseif mcode == 1 or mcode == 14 or mcode == 48 then maction = "back"
+          elseif mcode == 19 then maction = "rename"
+          elseif mcode == 211 then maction = "delete"
           end
         end
         
@@ -271,57 +322,16 @@ local function viewDatabase()
         elseif maction == "down" and sel_m < #(p.machines or {}) then sel_m = sel_m + 1
         elseif maction == "back" then in_machines = false
         elseif maction == "rename" then
-          if #(p.machines or {}) > 0 then
-            local m = p.machines[sel_m]
-            local newName = readInput(rx, H-4, "New name: ", m.name)
-            if newName ~= "" then
-              m.name = newName
-              registry.save()
-            end
-          end
+          local m = p.machines[sel_m]
+          local newName = readInput(rx, H-4, "New name: ", m.name)
+          if newName ~= "" then m.name = newName; registry.save() end
         elseif maction == "delete" then
-          if #(p.machines or {}) > 0 then
-            local m = p.machines[sel_m]
-            drawText(rx, H-4, "Delete machine " .. m.name .. "? (y/n)", C.warn)
-            local ans = readInput(rx, H-3, "> ", "")
-            if ans:lower() == "y" then
-              registry.removeMachine(p.name, m.adapter_addr)
-              if sel_m > #(p.machines or {}) then sel_m = math.max(1, #(p.machines or {})) end
-            end
-          end
-        elseif maction == "change" then
-          if #(p.machines or {}) > 0 then
-            local m = p.machines[sel_m]
-            clearRight()
-            drawText(rx, 2, "--- RELINK ADAPTER ---", C.title)
-            drawText(rx, 4, "Select a NEW unregistered adapter for " .. m.name .. ":")
-            
-            local adapters = mch.scanNetwork()
-            local ta, _ = buildTaken()
-            local free_a = {}
-            for _, gm in ipairs(adapters) do
-              if not ta[gm.addr] then table.insert(free_a, gm) end
-            end
-            
-            if #free_a == 0 then
-              drawText(rx, 6, "No free adapters found on network.", C.warn)
-              drawText(rx, 7, "Press Enter...")
-              readInput(rx, 8, ">", "")
-            else
-              for fi, fa in ipairs(free_a) do
-                drawText(rx, 5+fi, fi .. ". " .. fa.name .. " (" .. string.sub(fa.addr, 1, 8) .. ")")
-              end
-              local ans = readInput(rx, 6+#free_a, "Select number (0 to cancel): ", "")
-              local num = tonumber(ans)
-              if num and num > 0 and num <= #free_a then
-                -- Relink! We must remove the old entry and add the new one
-                local new_addr = free_a[num].addr
-                m.adapter_addr = new_addr
-                registry.save()
-                drawText(rx, 8+#free_a, "Adapter replaced successfully!", C.ok)
-                os.sleep(1)
-              end
-            end
+          local m = p.machines[sel_m]
+          drawText(rx, H-4, "Delete " .. m.name .. "? (y/n)", C.warn)
+          local ans = readInput(rx, H-3, "> ", "")
+          if ans:lower() == "y" then
+            registry.removeMachine(p.name, m.adapter_addr)
+            if sel_m > #(p.machines or {}) then sel_m = math.max(1, #(p.machines or {})) end
           end
         end
       end
@@ -335,6 +345,7 @@ end
 
 local MENU_ITEMS = {
   { label = "Scan New Machines",  fn = viewScan },
+  { label = "Configure LSC",      fn = setup_lsc },
   { label = "Manage Database",    fn = viewDatabase },
   { label = "Exit Setup Wizard",  fn = function() return "exit" end },
 }

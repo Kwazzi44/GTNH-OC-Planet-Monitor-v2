@@ -396,27 +396,28 @@ local function mainLoop()
     local ok, err = pcall(function()
       -- Обновление статистики (TPS, LSC)
       if ui.view == VIEW.PLANETS then
-        -- Поиск LSC если еще не найден (умный поиск)
+        -- Поиск LSC (приоритет конфигу)
         if not ui.lsc_addr then
-          -- Сначала ищем среди gt_machine, потом среди всех
-          local function check(addr)
-            local p = component.proxy(addr)
-            if p then
-              -- Проверяем разные варианты имен методов GT
-              local getS = p.getStoredEU or p.getEUStored
-              local getM = p.getEUCapacity or p.getEUMax
-              if getS and getM then return true end
+          if config.lsc_address then
+            ui.lsc_addr = config.lsc_address
+          else
+            -- Авто-поиск если не настроено точечно
+            local function check(addr)
+              local p = component.proxy(addr)
+              if p then
+                local getS = p.getStoredEU or p.getEUStored
+                local getM = p.getEUCapacity or p.getEUMax
+                if getS and getM then return true end
+              end
+              return false
             end
-            return false
-          end
-
-          for addr, name in component.list("gt_machine") do
-            if check(addr) then ui.lsc_addr = addr; break end
-          end
-          
-          if not ui.lsc_addr then
-            for addr, name in component.list() do
+            for addr, name in component.list("gt_machine") do
               if check(addr) then ui.lsc_addr = addr; break end
+            end
+            if not ui.lsc_addr then
+              for addr, name in component.list() do
+                if check(addr) then ui.lsc_addr = addr; break end
+              end
             end
           end
         end
