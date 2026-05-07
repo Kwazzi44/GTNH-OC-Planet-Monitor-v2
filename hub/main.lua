@@ -167,11 +167,20 @@ local function runSetup()
     local w,h = gpu.getResolution()
     gpu.fill(1,1,w,h," ")
   end
+  -- Отключаем слушатели на время работы другого скрипта
+  event.ignore("key_down", safeOnKey)
+  event.ignore("touch", safeOnTouch)
+
   local shell = require("shell")
   local ok, err = pcall(shell.execute, "/home/hub/setup.lua")
   if not ok then
     io.write("[ERROR] Setup failed: " .. tostring(err) .. "\n")
   end
+
+  -- Возвращаем слушатели
+  event.listen("key_down", safeOnKey)
+  event.listen("touch", safeOnTouch)
+
   registry.load()
   ui.dirty = true
 end
@@ -187,20 +196,20 @@ local function onKey(_, _, char, code)
   if code == 48 or code == 14 then
     ui.view = VIEW.PLANETS; ui.dirty = true; return
   end
-  -- L → лог (code 38)
-  if code == 38 then
+  -- F4 → лог (code 62)
+  if code == 62 then
     ui.log_scroll = nil; ui.view = VIEW.LOG; ui.dirty = true; return
   end
-  -- R → poll сейчас (code 19)
-  if code == 19 then
+  -- F3 → poll сейчас (code 61)
+  if code == 61 then
     pollAll(); setNotify("Refreshed", 0x4477FF); return
   end
-  -- A → restart all (code 30)
+  -- A → restart all (code 30) - оставим A, но только в VIEW.PLANETS/DETAIL
   if code == 30 then
     doRestartAll(); return
   end
-  -- S → setup (code 31)
-  if code == 31 and ui.view == VIEW.PLANETS then
+  -- F1 → setup (code 59)
+  if code == 59 and ui.view == VIEW.PLANETS then
     runSetup(); return
   end
   -- ENTER
