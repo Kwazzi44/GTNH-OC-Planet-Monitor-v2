@@ -96,18 +96,28 @@ local function readInput(x, y, prompt, default)
     gpu.setForeground(C.title)
     gpu.set(px, y, input .. "_")
     
-    local e, _, char, code = event.pull("key_down")
-    if char > 31 then
-      input = input .. unicode.char(char)
-    elseif code == 14 then -- Backspace
-      if unicode.len(input) > 0 then
-        input = unicode.sub(input, 1, -2)
+    local ev = table.pack(event.pull())
+    local e = ev[1]
+    
+    if e == "key_down" then
+      local _, char, code = ev[2], ev[3], ev[4]
+      if code == 28 then -- Enter
+        gpu.fill(px, y, W - px, 1, " ")
+        gpu.setForeground(C.ok)
+        gpu.set(px, y, input)
+        return input
+      elseif code == 14 then -- Backspace
+        if unicode.len(input) > 0 then
+          input = unicode.sub(input, 1, -2)
+        end
+      elseif char > 31 then
+        input = input .. unicode.char(char)
       end
-    elseif code == 28 then -- Enter
-      gpu.fill(px, y, W - px, 1, " ")
-      gpu.setForeground(C.ok)
-      gpu.set(px, y, input)
-      return input
+    elseif e == "clipboard" then
+      local text = ev[3]
+      if text then
+        input = input .. text
+      end
     end
   end
 end
