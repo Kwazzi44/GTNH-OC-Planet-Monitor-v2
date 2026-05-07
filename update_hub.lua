@@ -19,6 +19,7 @@ local FILES = {
   { "/hub/logger.lua",    "/home/hub/logger.lua"    },
   { "/hub/registry.lua",  "/home/hub/registry.lua"  },
   { "/hub/machines.lua",  "/home/hub/machines.lua"  },
+  { "/hub/stats.lua",     "/home/hub/stats.lua"     },
   { "/hub/gui.lua",       "/home/hub/gui.lua"       },
   { "/hub/setup.lua",     "/home/hub/setup.lua"     },
   { "/hub/main.lua",      "/home/hub/main.lua"      },
