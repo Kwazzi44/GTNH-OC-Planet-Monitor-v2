@@ -175,43 +175,50 @@ local function viewScan()
 end
 
 local function setup_lsc()
+  load_config()
   clearRight()
   header("CONFIGURE ENERGY MONITOR (LSC)")
   local rx = LEFT_W + 3
   
   local candidates = {}
-  for addr, name in component.list() do
-    local is_reg = false
-    for _, p in ipairs(registry.getPlanetList()) do
-      for _, m in ipairs(p.machines or {}) do
-        if m.adapter_addr == addr then is_reg = true; break end
-      end
+  local ok, list = pcall(component.list)
+  if not ok then return end
+
+  -- Собираем список всех УЖЕ занятых адресов
+  local taken = {}
+  local p_list = registry.getPlanetList() or {}
+  for _, p in ipairs(p_list) do
+    for _, m in ipairs(p.machines or {}) do
+      if m.adapter_addr then taken[m.adapter_addr] = true end
     end
-    
-    if not is_reg and addr ~= component.gpu.address and addr ~= component.screen.address then
+  end
+
+  for addr, name in list do
+    if not taken[addr] and addr ~= component.gpu.address and addr ~= component.screen.address then
       table.insert(candidates, {addr = addr, name = name})
     end
   end
 
   if #candidates == 0 then
     drawText(rx, 4, "No available adapters found.", C.warn)
-    drawText(rx, 5, "Press Enter to return...")
+    drawText(rx, 6, "Press Enter to back...", C.dim)
     while true do local _,_,_,c = event.pull("key_down") if c == 28 then break end end
     return
   end
 
   drawText(rx, 4, "Select the adapter for LSC:", C.title)
   for i, c in ipairs(candidates) do
-    drawText(rx, 5+i, string.format("%d. %s", i, string.sub(c.addr, 1, 8)))
+    if i > 10 then break end -- не выходим за экран
+    drawText(rx, 5+i, string.format("%d. [%s] %s...", i, c.name, string.sub(c.addr, 1, 8)))
   end
   
-  local ans = readInput(rx, 6+#candidates, "Selection (0 to cancel) > ", "")
+  local ans = readInput(rx, 7+#candidates, "Selection (0 to cancel) > ", "")
   local idx = tonumber(ans)
   
   if idx and idx > 0 and idx <= #candidates then
     config.lsc_address = candidates[idx].addr
     save_config()
-    drawText(rx, 8+#candidates, "[OK] LSC bound!", C.ok)
+    drawText(rx, 9+#candidates, "[OK] LSC bound!", C.ok)
     os.sleep(1)
   end
 end
