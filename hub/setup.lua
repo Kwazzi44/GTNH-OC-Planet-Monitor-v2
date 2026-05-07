@@ -208,17 +208,28 @@ local function setup_lsc()
 
   drawText(rx, 4, "Select the adapter for LSC:", C.title)
   for i, c in ipairs(candidates) do
-    if i > 10 then break end -- не выходим за экран
-    drawText(rx, 5+i, string.format("%d. [%s] %s...", i, c.name, string.sub(c.addr, 1, 8)))
+    if i > 12 then break end 
+    drawText(rx, 4+i, string.format("%d. [%s] %s...", i, c.name, string.sub(c.addr, 1, 8)))
   end
   
-  local ans = readInput(rx, 7+#candidates, "Selection (0 to cancel) > ", "")
+  local last_y = 5 + math.min(#candidates, 12)
+  drawText(rx, last_y, "99. Manual Entry (Enter full UUID)", C.key)
+  
+  local ans = readInput(rx, last_y + 2, "Selection (0 to cancel) > ", "")
   local idx = tonumber(ans)
   
-  if idx and idx > 0 and idx <= #candidates then
+  if idx == 99 then
+    local full_id = readInput(rx, last_y + 4, "Enter full ID: ", "")
+    if #full_id > 10 then
+      config.lsc_address = full_id
+      save_config()
+      drawText(rx, last_y + 6, "[OK] LSC bound to manual ID!", C.ok)
+      os.sleep(1.5)
+    end
+  elseif idx and idx > 0 and idx <= #candidates then
     config.lsc_address = candidates[idx].addr
     save_config()
-    drawText(rx, 9+#candidates, "[OK] LSC bound!", C.ok)
+    drawText(rx, last_y + 4, "[OK] LSC bound!", C.ok)
     os.sleep(1)
   end
 end
