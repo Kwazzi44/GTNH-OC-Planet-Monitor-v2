@@ -73,35 +73,20 @@ function machines.scanNetwork()
         end
       end
     if name == "Unknown" and ok and proxy then
-      -- Сначала логируем, почему не сработали стандартные методы (например, getName)
-      for _, m in ipairs(GT_NAME_METHODS) do
-        if type(proxy[m]) == "function" then
-          local ok2, n = pcall(proxy[m])
-          require("logger").log("SYSTEM", "DEBUG", "Method " .. m .. " -> ok:" .. tostring(ok2) .. " val:" .. tostring(n))
-        end
-      end
-
-      -- Теперь проверяем сенсор с логированием
+      -- Пытаемся вытащить имя из сенсора, если стандартные методы не сработали
       if type(proxy.getSensorInformation) == "function" then
         local ok_s, s_data = pcall(proxy.getSensorInformation)
-        require("logger").log("SYSTEM", "DEBUG", "Sensor -> ok:" .. tostring(ok_s) .. " type:" .. type(s_data))
-        if ok_s and type(s_data) == "table" then
-          require("logger").log("SYSTEM", "DEBUG", "Sensor[1]: " .. tostring(s_data[1]))
-          if s_data[1] then
-            local clean = s_data[1]:gsub("§.", "")
-            if clean and clean ~= "" then
-              name = clean
-            end
+        if ok_s and type(s_data) == "table" and s_data[1] then
+          local clean = s_data[1]:gsub("§.", "")
+          if clean and clean ~= "" then
+            name = clean
           end
         end
       end
       
+      -- Если все еще Unknown, скорее всего это просто шлюз (Hatch) или корпус (Hull)
       if name == "Unknown" then
-        pcall(function()
-          local methods = {}
-          for k, _ in pairs(proxy) do table.insert(methods, k) end
-          require("logger").log("SYSTEM", "DEBUG", "Unknown machine " .. string.sub(addr,1,8) .. " methods: " .. table.concat(methods, ", "))
-        end)
+        name = "Hatch/Hull"
       end
     end
 

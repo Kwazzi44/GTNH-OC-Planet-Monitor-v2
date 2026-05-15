@@ -18,9 +18,24 @@ end
 local function writeLine(line)
   table.insert(_lines, line)
   local max = config.log_max_lines or 100
-  while #_lines > max do table.remove(_lines, 1) end
-  local f = io.open(config.log_file, "a")
-  if f then f:write(line .. "\n"); f:close() end
+  local trimmed = false
+  while #_lines > max do 
+    table.remove(_lines, 1)
+    trimmed = true
+  end
+  
+  if trimmed then
+    -- Перезаписываем файл целиком, чтобы он не рос бесконечно
+    local f = io.open(config.log_file, "w")
+    if f then 
+      for _, l in ipairs(_lines) do f:write(l .. "\n") end
+      f:close() 
+    end
+  else
+    -- Просто дописываем в конец
+    local f = io.open(config.log_file, "a")
+    if f then f:write(line .. "\n"); f:close() end
+  end
 end
 
 function logger.log(planet, machine, msg)
@@ -39,9 +54,27 @@ function logger.load()
   local f = io.open(config.log_file, "r")
   if not f then return end
   local max = config.log_max_lines or 100
-  for line in f:lines() do table.insert(_lines, line) end
+  local count = 0
+  for line in f:lines() do 
+    table.insert(_lines, line)
+    count = count + 1
+    if count % 1000 == 0 then require("os").sleep(0) end -- предотвращаем тайм-аут на больших логах
+  end
   f:close()
-  while #_lines > max do table.remove(_lines, 1) end
+  
+  local trimmed = false
+  while #_lines > max do 
+    table.remove(_lines, 1)
+    trimmed = true
+  end
+  
+  if trimmed then
+    local fw = io.open(config.log_file, "w")
+    if fw then 
+      for _, l in ipairs(_lines) do fw:write(l .. "\n") end
+      fw:close()
+    end
+  end
 end
 
 return logger
