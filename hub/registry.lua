@@ -43,13 +43,17 @@ local MACHINE_SAVE = {
 local function stripRuntime(planets)
   local out = {}
   for pname, p in pairs(planets) do
-    local pm = { name = p.name, meta = p.meta or {}, machines = {} }
-    for _, m in ipairs(p.machines or {}) do
-      local sm = {}
-      for _, k in ipairs(MACHINE_SAVE) do sm[k] = m[k] end
-      table.insert(pm.machines, sm)
+    if pname == "__ignored__" then
+      out[pname] = p
+    else
+      local pm = { name = p.name, meta = p.meta or {}, machines = {} }
+      for _, m in ipairs(p.machines or {}) do
+        local sm = {}
+        for _, k in ipairs(MACHINE_SAVE) do sm[k] = m[k] end
+        table.insert(pm.machines, sm)
+      end
+      out[pname] = pm
     end
-    out[pname] = pm
   end
   return out
 end
@@ -73,26 +77,28 @@ function registry.load()
   if ok and type(result) == "table" then
     _data = result
     -- Инициализируем runtime-поля и мигрируем старую базу (Schema Migration)
-    for _, p in pairs(_data) do
-      p.status  = "UNKNOWN"
-      p.last_ok = 0
-      p.meta    = p.meta or {}
-      for _, m in ipairs(p.machines or {}) do
-        -- Миграция старых flat-полей (rs_*) в блок redstone={}
-        if m.rs_addr and not m.redstone then
-          m.redstone = {
-            addr  = m.rs_addr,
-            side  = m.rs_side,
-            color = m.rs_color,
-            mode  = m.rs_mode,
-            pulse = m.rs_pulse
-          }
-          -- Удаляем старые поля
-          m.rs_addr = nil; m.rs_side = nil; m.rs_color = nil; m.rs_mode = nil; m.rs_pulse = nil
+    for pname, p in pairs(_data) do
+      if pname ~= "__ignored__" then
+        p.status  = "UNKNOWN"
+        p.last_ok = 0
+        p.meta    = p.meta or {}
+        for _, m in ipairs(p.machines or {}) do
+          -- Миграция старых flat-полей (rs_*) в блок redstone={}
+          if m.rs_addr and not m.redstone then
+            m.redstone = {
+              addr  = m.rs_addr,
+              side  = m.rs_side,
+              color = m.rs_color,
+              mode  = m.rs_mode,
+              pulse = m.rs_pulse
+            }
+            -- Удаляем старые поля
+            m.rs_addr = nil; m.rs_side = nil; m.rs_color = nil; m.rs_mode = nil; m.rs_pulse = nil
+          end
+          m.meta   = m.meta or {}
+          m.active = false
+          m.error  = nil
         end
-        m.meta   = m.meta or {}
-        m.active = false
-        m.error  = nil
       end
     end
   end
@@ -149,7 +155,9 @@ end
 --- Отсортированный список планет для GUI
 function registry.getPlanetList()
   local list = {}
-  for _, p in pairs(_data) do table.insert(list, p) end
+  for pname, p in pairs(_data) do 
+    if pname ~= "__ignored__" then table.insert(list, p) end
+  end
   table.sort(list, function(a, b) return a.name < b.name end)
   return list
 end
@@ -157,12 +165,24 @@ end
 --- Все адреса адаптеров из всех планет (для быстрой проверки)
 function registry.getAllAdapterAddrs()
   local addrs = {}
-  for _, p in pairs(_data) do
-    for _, m in ipairs(p.machines or {}) do
-      addrs[m.adapter_addr] = { planet = p.name, machine = m }
+  for pname, p in pairs(_data) do
+    if pname ~= "__ignored__" then
+      for _, m in ipairs(p.machines or {}) do
+        addrs[m.adapter_addr] = { planet = p.name, machine = m }
+      end
     end
   end
   return addrs
+end
+
+function registry.ignoreAdapter(addr)
+  _data["__ignored__"] = _data["__ignored__"] or { addrs = {} }
+  _data["__ignored__"].addrs[addr] = true
+  registry.save()
+end
+
+function registry.isIgnored(addr)
+  return _data["__ignored__"] and _data["__ignored__"].addrs and _data["__ignored__"].addrs[addr]
 end
 
 return registry

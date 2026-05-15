@@ -78,6 +78,20 @@ local function header(txt)
   drawText(LEFT_W + 3, 2, txt, C.title)
 end
 
+local function drawFooter(keys)
+  gpu.setBackground(C.border)
+  gpu.fill(LEFT_W + 1, H, W - LEFT_W, 1, " ")
+  local x = LEFT_W + 3
+  for _, k in ipairs(keys) do
+    if x >= W - 5 then break end
+    drawText(x, H, "[" .. k[1] .. "]", C.title, C.border)
+    x = x + #k[1] + 2
+    drawText(x, H, k[2], C.fg, C.border)
+    x = x + #k[2] + 2
+  end
+  gpu.setBackground(C.bg)
+end
+
 local function clearRight()
   gpu.setBackground(C.bg)
   gpu.fill(LEFT_W + 2, 1, W - LEFT_W - 1, H, " ")
@@ -150,7 +164,7 @@ local function viewScan()
   
   local free_a = {}
   for _, gm in ipairs(adapters) do
-    if not taken_a[gm.addr] then table.insert(free_a, gm) end
+    if not taken_a[gm.addr] and not registry.isIgnored(gm.addr) then table.insert(free_a, gm) end
   end
   
   if #free_a == 0 then
@@ -170,9 +184,10 @@ local function viewScan()
     drawText(rx, 4, "Type:    " .. gm.name)
     drawText(rx, 5, "Address: " .. string.sub(gm.addr, 1, 16) .. "...")
     
-    drawText(rx, 7, "Do you want to register this machine? (y/n)")
+    drawText(rx, 7, "Action: (y)es, (n)o, (i)gnore")
     local ans = readInput(rx, 8, "> ", "")
-    if ans:lower() == "y" then
+    local l_ans = ans:lower()
+    if l_ans == "y" then
       local pname = readInput(rx, 10, "Planet name: ", "Earth")
       local mname = readInput(rx, 11, "Machine name: ", gm.name)
       
@@ -182,6 +197,10 @@ local function viewScan()
         adapter_addr = gm.addr,
       })
       drawText(rx, 13, "Registered! (Redstone can be configured later)", C.ok)
+      os.sleep(1)
+    elseif l_ans == "i" then
+      registry.ignoreAdapter(gm.addr)
+      drawText(rx, 10, "Ignored! Won't show up in scan anymore.", C.dim)
       os.sleep(1)
     end
   end
@@ -281,7 +300,7 @@ local function viewDatabase()
     end
     gpu.setBackground(C.bg)
     
-    drawText(rx, H-2, "[Enter] Select  [Del] Delete  [B] Back", C.dim)
+    drawFooter({{"Enter", "Select"}, {"Del", "Delete"}, {"B", "Back"}})
     
     local action = nil
     local ev = table.pack(event.pull())
@@ -333,7 +352,7 @@ local function viewDatabase()
           end
         end
         gpu.setBackground(C.bg)
-        drawText(rx, H-2, "[R]ename  [Del] Delete  [B] Back", C.dim)
+        drawFooter({{"R", "Rename"}, {"Del", "Delete"}, {"B", "Back"}})
         
         local maction = nil
         local mev = table.pack(event.pull())
