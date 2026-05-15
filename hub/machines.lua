@@ -73,17 +73,29 @@ function machines.scanNetwork()
         end
       end
     if name == "Unknown" and ok and proxy then
+      -- Сначала логируем, почему не сработали стандартные методы (например, getName)
+      for _, m in ipairs(GT_NAME_METHODS) do
+        if type(proxy[m]) == "function" then
+          local ok2, n = pcall(proxy[m])
+          require("logger").log("SYSTEM", "DEBUG", "Method " .. m .. " -> ok:" .. tostring(ok2) .. " val:" .. tostring(n))
+        end
+      end
+
+      -- Теперь проверяем сенсор с логированием
       if type(proxy.getSensorInformation) == "function" then
-        pcall(function()
-          local s_data = proxy.getSensorInformation()
-          if type(s_data) == "table" and s_data[1] then
+        local ok_s, s_data = pcall(proxy.getSensorInformation)
+        require("logger").log("SYSTEM", "DEBUG", "Sensor -> ok:" .. tostring(ok_s) .. " type:" .. type(s_data))
+        if ok_s and type(s_data) == "table" then
+          require("logger").log("SYSTEM", "DEBUG", "Sensor[1]: " .. tostring(s_data[1]))
+          if s_data[1] then
             local clean = s_data[1]:gsub("§.", "")
             if clean and clean ~= "" then
               name = clean
             end
           end
-        end)
+        end
       end
+      
       if name == "Unknown" then
         pcall(function()
           local methods = {}
