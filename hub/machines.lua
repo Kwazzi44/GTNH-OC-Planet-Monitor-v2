@@ -105,8 +105,6 @@ function machines.scanNetwork()
       end
     end
 
-    end
-
     local active = (ok and proxy) and readActive(proxy) or false
     table.insert(result, { addr = addr, name = name, active = active or false })
   end
