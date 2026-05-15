@@ -13,34 +13,31 @@ for addr, _ in component.list("gt_machine") do
   log("\n--- Machine #" .. count .. " | Address: " .. string.sub(addr, 1, 12) .. "... ---")
   local proxy = component.proxy(addr)
   
-  -- Проверяем все стандартные методы имён
-  local methods = { "getName", "getMachineName", "getBlockName", "getInventoryName", "getCustomName" }
-  for _, m in ipairs(methods) do
-    if type(proxy[m]) == "function" then
-      local ok, val = pcall(proxy[m])
-      log("Method " .. m .. "() -> " .. (ok and tostring(val) or ("ERROR: " .. tostring(val))))
-    end
+  -- Dump all methods available in the proxy
+  local available_methods = {}
+  for k, v in pairs(proxy) do
+    table.insert(available_methods, k)
   end
+  log("Available methods: " .. table.concat(available_methods, ", "))
   
-  -- Выгружаем весь сенсор
-  if type(proxy.getSensorInformation) == "function" then
-    local ok, data = pcall(proxy.getSensorInformation)
-    if ok then
-      log("Sensor Information (type: " .. type(data) .. "):")
-      if type(data) == "table" then
-        for i, v in ipairs(data) do
-          -- Заменяем параграфы (цветовые коды) на что-то читаемое в txt
-          local clean_str = tostring(v):gsub("§.", "")
-          log("  [" .. i .. "] " .. clean_str)
-        end
-      else
-        log("  Data: " .. tostring(data))
+  -- Try to call getName directly
+  local ok, val = pcall(proxy.getName)
+  log("getName() -> " .. (ok and tostring(val) or ("ERROR: " .. tostring(val))))
+  
+  -- Try to call getSensorInformation directly
+  local sok, sdata = pcall(proxy.getSensorInformation)
+  if sok then
+    log("Sensor Information (type: " .. type(sdata) .. "):")
+    if type(sdata) == "table" then
+      for i, v in ipairs(sdata) do
+        local clean_str = tostring(v):gsub("§.", "")
+        log("  [" .. i .. "] " .. clean_str)
       end
     else
-      log("Sensor Information -> ERROR: " .. tostring(data))
+      log("  Data: " .. tostring(sdata))
     end
   else
-    log("Sensor Information -> NOT FOUND")
+    log("Sensor Information -> ERROR: " .. tostring(sdata))
   end
 end
 
