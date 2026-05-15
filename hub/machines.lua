@@ -73,11 +73,24 @@ function machines.scanNetwork()
         end
       end
     if name == "Unknown" and ok and proxy then
-      pcall(function()
-        local methods = {}
-        for k, _ in pairs(proxy) do table.insert(methods, k) end
-        require("logger").log("SYSTEM", "DEBUG", "Unknown machine " .. string.sub(addr,1,8) .. " methods: " .. table.concat(methods, ", "))
-      end)
+      if type(proxy.getSensorInformation) == "function" then
+        pcall(function()
+          local s_data = proxy.getSensorInformation()
+          if type(s_data) == "table" and s_data[1] then
+            local clean = s_data[1]:gsub("§.", "")
+            if clean and clean ~= "" then
+              name = clean
+            end
+          end
+        end)
+      end
+      if name == "Unknown" then
+        pcall(function()
+          local methods = {}
+          for k, _ in pairs(proxy) do table.insert(methods, k) end
+          require("logger").log("SYSTEM", "DEBUG", "Unknown machine " .. string.sub(addr,1,8) .. " methods: " .. table.concat(methods, ", "))
+        end)
+      end
     end
 
     end
