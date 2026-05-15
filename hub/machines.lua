@@ -86,10 +86,12 @@ function machines.scanNetwork()
             end
           end
           
-          if s_data[1] then
+          if (name == "Unknown" or is_controller) and s_data[1] then
             local clean = s_data[1]:gsub("§.", "")
             -- Если строка не содержит двоеточия (как в "Progress: 0" или "Operational Data:"),
             -- то это красивое имя из сенсора, и оно лучше, чем сырое имя вроде multimachine.oildrillinfinite
+            -- Но мы применяем это только для контроллеров или если имя Unknown, 
+            -- чтобы не переименовать шины в "The bus is online"
             if clean and clean ~= "" and not clean:match(":") then
               name = clean
             end
