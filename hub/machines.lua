@@ -80,14 +80,16 @@ function machines.scanNetwork()
         if ok_s and type(s_data) == "table" then
           for _, line in ipairs(s_data) do
             local clean = line:gsub("§.", "")
-            if clean:match("Progress:") or clean:match("Problems:") or clean:match("Efficiency:") then
+            local lower = clean:lower()
+            if lower:match("progress:") or lower:match("problems") or lower:match("efficiency:") then
               is_controller = true
             end
           end
           
-          if name == "Unknown" and s_data[1] then
+          if s_data[1] then
             local clean = s_data[1]:gsub("§.", "")
-            -- Если строка не содержит двоеточия (как в "Progress: 0"), то это скорее всего имя
+            -- Если строка не содержит двоеточия (как в "Progress: 0" или "Operational Data:"),
+            -- то это красивое имя из сенсора, и оно лучше, чем сырое имя вроде multimachine.oildrillinfinite
             if clean and clean ~= "" and not clean:match(":") then
               name = clean
             end
