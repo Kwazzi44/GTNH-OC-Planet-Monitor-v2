@@ -47,55 +47,57 @@ local runSetup, safeOnKey, safeOnTouch
 
 local function pollAll()
   for pname, planet in pairs(registry.getAll()) do
-    local all_missing = (#planet.machines > 0)
-    local any_offline = false
-    local any_problem = false
-    local prev_status = planet.status
+    if pname ~= "__ignored__" then
+      local all_missing = (#planet.machines > 0)
+      local any_offline = false
+      local any_problem = false
+      local prev_status = planet.status
 
-    for _, m in ipairs(planet.machines) do
-      local prev_active = m.active
-      local active, err = mch.getStatus(m)
-      m.active = active
-      m.error  = err
+      for _, m in ipairs(planet.machines) do
+        local prev_active = m.active
+        local active, err = mch.getStatus(m)
+        m.active = active
+        m.error  = err
 
-      if err == "RING_DOWN" then
-        -- компонент полностью исчез из OC-сети, all_missing остаётся true
+        if err == "RING_DOWN" then
+          -- компонент полностью исчез из OC-сети, all_missing остаётся true
+        else
+          all_missing = false   -- компонент виден в сети, значит кольцо цело
+        end
+
+        if err == "MAINTENANCE" then
+          any_problem = true
+        end
+
+        if not active then
+          any_offline = true
+        end
+
+        -- Лог изменений статуса машины
+        if prev_active ~= active then
+          logger.log(pname, m.name, active and "ACTIVE" or "OFFLINE")
+        end
+      end
+
+      -- Вычислить статус планеты
+      local new_status
+      if #planet.machines == 0 then
+        new_status = "UNKNOWN"
+      elseif all_missing then
+        new_status = "RING_DOWN"
+      elseif any_offline then
+        new_status = "PARTIAL"
+      elseif any_problem then
+        new_status = "MAINTENANCE"
       else
-        all_missing = false   -- компонент виден в сети, значит кольцо цело
+        new_status = "OK"
+        planet.last_ok = os.time()
       end
 
-      if err == "MAINTENANCE" then
-        any_problem = true
+      if prev_status ~= new_status then
+        planet.status = new_status
+        logger.log(pname, nil, prev_status .. " -> " .. new_status)
       end
-
-      if not active then
-        any_offline = true
-      end
-
-      -- Лог изменений статуса машины
-      if prev_active ~= active then
-        logger.log(pname, m.name, active and "ACTIVE" or "OFFLINE")
-      end
-    end
-
-    -- Вычислить статус планеты
-    local new_status
-    if #planet.machines == 0 then
-      new_status = "UNKNOWN"
-    elseif all_missing then
-      new_status = "RING_DOWN"
-    elseif any_offline then
-      new_status = "PARTIAL"
-    elseif any_problem then
-      new_status = "MAINTENANCE"
-    else
-      new_status = "OK"
-      planet.last_ok = os.time()
-    end
-
-    if prev_status ~= new_status then
-      planet.status = new_status
-      logger.log(pname, nil, prev_status .. " -> " .. new_status)
     end
   end
 
