@@ -72,21 +72,32 @@ function machines.scanNetwork()
           end
         end
       end
-    if name == "Unknown" and ok and proxy then
-      -- Пытаемся вытащить имя из сенсора, если стандартные методы не сработали
+      local is_controller = false
+      
+      -- Пытаемся вытащить имя из сенсора и определить, контроллер ли это
       if type(proxy.getSensorInformation) == "function" then
         local ok_s, s_data = pcall(proxy.getSensorInformation)
-        if ok_s and type(s_data) == "table" and s_data[1] then
-          local clean = s_data[1]:gsub("§.", "")
-          if clean and clean ~= "" then
-            name = clean
+        if ok_s and type(s_data) == "table" then
+          for _, line in ipairs(s_data) do
+            local clean = line:gsub("§.", "")
+            if clean:match("Progress:") or clean:match("Problems:") or clean:match("Efficiency:") then
+              is_controller = true
+            end
+          end
+          
+          if name == "Unknown" and s_data[1] then
+            local clean = s_data[1]:gsub("§.", "")
+            -- Если строка не содержит двоеточия (как в "Progress: 0"), то это скорее всего имя
+            if clean and clean ~= "" and not clean:match(":") then
+              name = clean
+            end
           end
         end
       end
       
-      -- Если все еще Unknown, скорее всего это просто шлюз (Hatch) или корпус (Hull)
+      -- Финальный фоллбэк, если имя так и не нашлось
       if name == "Unknown" then
-        name = "Hatch/Hull"
+        name = is_controller and "Unknown Controller" or "Hatch/Hull"
       end
     end
 
