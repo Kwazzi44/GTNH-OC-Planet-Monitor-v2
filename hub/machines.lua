@@ -13,7 +13,7 @@ local STATUS_METHODS = { "isMachineActive", "isActive", "isWorking", "hasWork" }
 
 local function readActive(proxy)
   for _, m in ipairs(STATUS_METHODS) do
-    if type(proxy[m]) == "function" then
+    if proxy[m] then
       local ok, val = pcall(proxy[m])
       if ok and type(val) == "boolean" then return val end
     end
@@ -65,7 +65,7 @@ function machines.scanNetwork()
     local name = "Unknown"
     if ok and proxy then
       for _, m in ipairs(GT_NAME_METHODS) do
-        if type(proxy[m]) == "function" then
+        if proxy[m] then
           local ok2, n = pcall(proxy[m])
           if ok2 and type(n) == "string" and #n > 0 then
             name = n; break
@@ -75,7 +75,7 @@ function machines.scanNetwork()
       local is_controller = false
       
       -- Пытаемся вытащить имя из сенсора и определить, контроллер ли это
-      if type(proxy.getSensorInformation) == "function" then
+      if proxy.getSensorInformation then
         local ok_s, s_data = pcall(proxy.getSensorInformation)
         if ok_s and type(s_data) == "table" then
           for _, line in ipairs(s_data) do
