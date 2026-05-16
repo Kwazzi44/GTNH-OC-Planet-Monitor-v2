@@ -43,7 +43,7 @@ local MACHINE_SAVE = {
 local function stripRuntime(planets)
   local out = {}
   for pname, p in pairs(planets) do
-    if pname == "__ignored__" then
+    if pname == "__ignored__" or pname == "__system__" then
       out[pname] = p
     else
       local pm = { name = p.name, meta = p.meta or {}, machines = {} }
@@ -78,7 +78,7 @@ function registry.load()
     _data = result
     -- Инициализируем runtime-поля и мигрируем старую базу (Schema Migration)
     for pname, p in pairs(_data) do
-      if pname ~= "__ignored__" then
+      if pname ~= "__ignored__" and pname ~= "__system__" then
         p.status  = "UNKNOWN"
         p.last_ok = 0
         p.meta    = p.meta or {}
@@ -156,7 +156,7 @@ end
 function registry.getPlanetList()
   local list = {}
   for pname, p in pairs(_data) do 
-    if pname ~= "__ignored__" then table.insert(list, p) end
+    if pname ~= "__ignored__" and pname ~= "__system__" then table.insert(list, p) end
   end
   table.sort(list, function(a, b) return a.name < b.name end)
   return list
@@ -166,7 +166,7 @@ end
 function registry.getAllAdapterAddrs()
   local addrs = {}
   for pname, p in pairs(_data) do
-    if pname ~= "__ignored__" then
+    if pname ~= "__ignored__" and pname ~= "__system__" then
       for _, m in ipairs(p.machines or {}) do
         addrs[m.adapter_addr] = { planet = p.name, machine = m }
       end
@@ -183,6 +183,16 @@ end
 
 function registry.isIgnored(addr)
   return _data["__ignored__"] and _data["__ignored__"].addrs and _data["__ignored__"].addrs[addr]
+end
+
+function registry.setLSC(addr)
+  _data["__system__"] = _data["__system__"] or {}
+  _data["__system__"].lsc_address = addr
+  registry.save()
+end
+
+function registry.getLSC()
+  return _data["__system__"] and _data["__system__"].lsc_address or nil
 end
 
 return registry

@@ -18,11 +18,6 @@ if not gpu then
   return
 end
 
-local max_w, max_h = gpu.maxResolution()
-local target_w, target_h = 80, 25
-if max_w < target_w then target_w = max_w end
-if max_h < target_h then target_h = max_h end
-gpu.setResolution(target_w, target_h)
 local W, H = gpu.getResolution()
 local LEFT_W = 25
 
@@ -180,7 +175,7 @@ local function viewScan()
   
   local free_a = {}
   for _, gm in ipairs(adapters) do
-    if not taken_a[gm.addr] and not registry.isIgnored(gm.addr) and gm.addr ~= config.lsc_address then table.insert(free_a, gm) end
+    if not taken_a[gm.addr] and not registry.isIgnored(gm.addr) and gm.addr ~= registry.getLSC() then table.insert(free_a, gm) end
   end
   
   if #free_a == 0 then
@@ -219,8 +214,7 @@ local function viewScan()
       drawText(rx, 10, "Ignored! Won't show up in scan anymore.", C.dim)
       os.sleep(1)
     elseif l_ans == "l" then
-      config.lsc_address = gm.addr
-      save_config()
+      registry.setLSC(gm.addr)
       drawText(rx, 10, "LSC successfully bound to this adapter!", C.ok)
       os.sleep(1.5)
     end

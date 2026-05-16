@@ -96,20 +96,23 @@ end
 
 local function drawHeader(title, subtitle)
   -- Массивная шапка
-  g_fill(1, 1, W, 2, " ", C.title, C.header_bg)
+  g_fill(1, 1, W, 3, " ", C.title, C.header_bg)
   local deco = "══[ " .. title .. " ]" .. string.rep("═", W - #title - 8)
-  g_set(1, 1, deco, C.title, C.header_bg)
+  g_set(2, 2, deco, C.title, C.header_bg)
   
   if subtitle then
-    g_set(2, 2, "STATUS: " .. subtitle, C.dim, C.header_bg)
+    g_set(4, 3, "STATUS: " .. subtitle, C.dim, C.header_bg)
   end
   
   -- Разделительная линия
-  g_fill(1, 3, W, 1, " ", C.bg, C.bg)
-  g_set(1, 3, string.rep("─", W), C.border, C.bg)
+  g_fill(1, 4, W, 1, " ", C.bg, C.bg)
+  g_set(1, 4, string.rep("─", W), C.border, C.bg)
 end
 
 local function drawFooter(keys)
+  g_fill(1, H-1, W, 1, " ", C.bg, C.bg)
+  g_set(1, H-1, string.rep("─", W), C.border, C.bg)
+  
   g_fill(1, H, W, 1, " ", C.dim, C.header_bg)
   local x = 2
   for _, k in ipairs(keys) do
@@ -127,14 +130,6 @@ function gui.init()
   if not component.isAvailable("gpu") then return false end
   _gpu = component.gpu
   _gpu.setDepth(_gpu.maxDepth())
-  
-  -- Устанавливаем комфортное разрешение 80x25 для читаемости
-  local max_w, max_h = _gpu.maxResolution()
-  local target_w, target_h = 80, 25
-  if max_w < target_w then target_w = max_w end
-  if max_h < target_h then target_h = max_h end
-  _gpu.setResolution(target_w, target_h)
-  
   W, H = _gpu.getResolution()
   g_fill(1, 1, W, H, " ", C.text, C.bg)
   return true
@@ -144,87 +139,94 @@ function gui.clear()
   g_fill(1, 1, W, H, " ", C.text, C.bg)
 end
 
-function gui.drawPlanetList(planets, sel, scroll, stats)
-  g_fill(1, 4, W, H-4, " ", C.text, C.bg)
+function gui.drawPlanets(planets, sel, scroll, stats)
+  g_fill(1, 5, W, H-5, " ", C.text, C.bg)
+  
+  local total_nodes = 0
+  for _, p in ipairs(planets) do
+    total_nodes = total_nodes + #(p.machines or {})
+  end
 
-  local count = #planets
-  drawHeader(
-    "GTNH PLANET MONITOR V2.0",
-    count == 0 and "SYSTEM OFFLINE" or ("ONLINE - " .. count .. " NODES")
-  )
+  drawHeader("GTNH PLANET MONITOR V2.0", string.format("ONLINE - %d NODES", total_nodes))
 
-  local HY = 4
-  -- Заголовки колонок
+  local HY = 5
   g_fill(1, HY, W, 1, " ", C.dim, C.header_bg)
-  g_set( 2, HY, "#",  C.dim, C.header_bg)
-  g_set( 6, HY, "PLANET NAME", C.dim, C.header_bg)
-  g_set(24, HY, "STATUS", C.dim, C.header_bg)
-  g_set(34, HY, "ACTIVITY", C.dim, C.header_bg) -- Новая колонка
-  g_set(46, HY, "SEEN", C.dim, C.header_bg)
-  g_set(56, HY, "MACHINES", C.dim, C.header_bg)
+  
+  -- Динамическое распределение колонок
+  local c1 = 2                 -- #
+  local c2 = 6                 -- PLANET NAME
+  local c3 = math.floor(W * 0.3) -- STATUS
+  local c4 = math.floor(W * 0.45) -- ACTIVITY
+  local c5 = math.floor(W * 0.65) -- SEEN
+  local c6 = math.floor(W * 0.8)  -- MACHINES
+  
+  g_set(c1, HY, "#",  C.dim, C.header_bg)
+  g_set(c2, HY, "PLANET NAME", C.dim, C.header_bg)
+  g_set(c3, HY, "STATUS", C.dim, C.header_bg)
+  g_set(c4, HY, "ACTIVITY", C.dim, C.header_bg)
+  g_set(c5, HY, "SEEN", C.dim, C.header_bg)
+  g_set(c6, HY, "MACHINES", C.dim, C.header_bg)
 
   local LIST_Y = HY + 1
-  local LIST_H = H - 6
+  local LIST_H = H - LIST_Y - 5 -- Увеличено место под статистику
   scroll = scroll or 1
 
   for i = 0, LIST_H - 1 do
     local idx = scroll + i
-    local ry = LIST_Y + i
-    if idx <= count then
+    local ry  = LIST_Y + i
+    if idx <= #planets then
       local p = planets[idx]
       local isSel = (idx == sel)
       local bg = isSel and C.sel_bg or C.bg
       local fg = isSel and C.sel_fg or C.text
-      
       local st = p.status or "UNKNOWN"
       local scol = STATUS_COLOR[st] or C.unknown
-      
-      local total, active = 0, 0
+
+      local total = #(p.machines or {})
+      local active = 0
       for _, m in ipairs(p.machines or {}) do
-        total = total + 1
         if m.active then active = active + 1 end
       end
 
       g_fill(1, ry, W, 1, " ", fg, bg)
-      g_set(2, ry, string.format("%02d", idx), C.dim, bg)
-      g_set(6, ry, pad(p.name or "?", 16), fg, bg)
-      g_set(24, ry, STATUS_LABEL[st] or st, scol, bg)
+      g_set(c1, ry, string.format("%02d", idx), C.dim, bg)
+      g_set(c2, ry, pad(p.name or "?", c3 - c2 - 2), fg, bg)
+      g_set(c3, ry, STATUS_LABEL[st] or st, scol, bg)
       
       -- Индикатор активности
       if active > 0 then
-        g_set(34, ry, "● ACTIVE", C.ok, bg)
+        g_set(c4, ry, "● ACTIVE", C.ok, bg)
       else
-        g_set(34, ry, "○ idle", C.dim, bg)
+        g_set(c4, ry, "○ idle", C.dim, bg)
       end
       
-      g_set(46, ry, pad(timeAgo(p.last_ok), 8), C.dim, bg)
-      g_set(56, ry, string.format("%d/%d", active, total), (active > 0 and C.ok or C.text), bg)
+      g_set(c5, ry, pad(timeAgo(p.last_ok), c6 - c5 - 2), C.dim, bg)
+      g_set(c6, ry, string.format("%d/%d", active, total), (active > 0 and C.ok or C.text), bg)
     end
   end
 
   -- Stats Panel
   local STAT_Y = H - 4
-  g_fill(1, STAT_Y, W, 1, " ", C.border, C.border)
+  g_fill(1, STAT_Y-1, W, 1, " ", C.bg, C.bg)
   
   -- Server Stats
-  g_set(2, STAT_Y + 1, "SERVER ", C.dim, C.bg)
+  g_set(c2, STAT_Y + 1, "SERVER ", C.dim, C.bg)
   if stats and stats.tps then
     local tps_c = (stats.tps > 18) and C.ok or (stats.tps > 15 and C.warn or C.ring_down)
-    g_set(10, STAT_Y + 1, string.format("TPS %.1f", stats.tps), tps_c, C.bg)
+    g_set(c2 + 8, STAT_Y + 1, string.format("TPS %.1f", stats.tps), tps_c, C.bg)
   end
 
   -- Energy Stats
-  local col2 = 30
-  g_set(col2, STAT_Y + 1, "ENERGY ", C.dim, C.bg)
+  g_set(c4, STAT_Y + 1, "ENERGY ", C.dim, C.bg)
   if stats and stats.energy and stats.energy.max > 0 then
     local e = stats.energy
     local e_color = e.percent > 50 and C.ok or (e.percent > 20 and C.warn or C.ring_down)
-    g_set(col2 + 8, STAT_Y + 1, format_full(e.stored) .. " EU (" .. math.floor(e.percent) .. "%)", e_color, C.bg)
+    g_set(c4 + 8, STAT_Y + 1, format_full(e.stored) .. " EU (" .. math.floor(e.percent) .. "%)", e_color, C.bg)
     
     local diff_c = e.diff >= 0 and C.ok or C.ring_down
-    g_set(col2 + 8, STAT_Y + 2, (e.diff >= 0 and "+" or "") .. format_energy(e.diff / 20) .. " EU/t", diff_c, C.bg)
+    g_set(c4 + 8, STAT_Y + 2, (e.diff >= 0 and "+" or "") .. format_energy(e.diff / 20) .. " EU/t", diff_c, C.bg)
   else
-    g_set(col2 + 8, STAT_Y + 1, "LSC not configured", C.dim, C.bg)
+    g_set(c4 + 8, STAT_Y + 1, "LSC not configured", C.dim, C.bg)
   end
 
   drawFooter({
@@ -238,21 +240,28 @@ function gui.drawPlanetList(planets, sel, scroll, stats)
 end
 
 function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
-  g_fill(1, 4, W, H-4, " ", C.text, C.bg)
+  g_fill(1, 5, W, H-5, " ", C.text, C.bg)
 
   local st    = planet.status or "UNKNOWN"
   local scol  = STATUS_COLOR[st] or C.unknown
 
   drawHeader(tostring(planet.name or "?") .. " STATUS", STATUS_LABEL[st] or st)
 
-  local HY = 4
-  g_fill(1, HY, 45, 1, " ", C.dim, C.header_bg)
-  g_set( 2, HY, "#",  C.dim, C.header_bg)
-  g_set( 5, HY, "MACHINE",  24, C.dim, C.header_bg)
-  g_set(30, HY, "STATE",   15, C.dim, C.header_bg)
+  local HY = 5
+  
+  -- Динамическое распределение для деталей
+  local c1 = 2
+  local c2 = 5
+  local c3 = math.floor(W * 0.4)
+  local c4 = math.floor(W * 0.55)
+  
+  g_fill(1, HY, c4 - 1, 1, " ", C.dim, C.header_bg)
+  g_set( c1, HY, "#",  C.dim, C.header_bg)
+  g_set( c2, HY, "MACHINE",  24, C.dim, C.header_bg)
+  g_set( c3, HY, "STATE",   15, C.dim, C.header_bg)
 
-  g_fill(47, HY, W-46, 1, " ", C.title, C.header_bg)
-  g_set(48, HY, "TELEMETRY", C.title, C.header_bg)
+  g_fill(c4, HY, W-c4+1, 1, " ", C.title, C.header_bg)
+  g_set(c4 + 1, HY, "TELEMETRY", C.title, C.header_bg)
 
   local LIST_Y = HY + 1
   local LIST_H = H - LIST_Y - 1
@@ -270,19 +279,19 @@ function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
       local mcol = m.active and C.ok or C.ring_down
       local mst = m.active and ">> ACTIVE" or (m.error or "-- IDLE")
 
-      g_fill(1, ry, 46, 1, " ", fg, bg)
-      g_set(2, ry, string.format("%02d", idx), C.dim, bg)
-      g_set(5, ry, pad(m.name or "?", 24), fg, bg)
-      g_set(30, ry, mst, mcol, bg)
+      g_fill(1, ry, c4 - 1, 1, " ", fg, bg)
+      g_set(c1, ry, string.format("%02d", idx), C.dim, bg)
+      g_set(c2, ry, pad(m.name or "?", c3 - c2 - 2), fg, bg)
+      g_set(c3, ry, mst, mcol, bg)
     end
-    g_set(46, ry, "│", C.border, C.bg)
+    g_set(c4 - 1, ry, "│", C.border, C.bg)
   end
 
   if sensor_data then
     for i = 1, LIST_H do
       local line = sensor_data[i]
       if line then
-        g_set(48, LIST_Y + i - 1, pad(line:gsub("§.", ""), W - 49), C.text, C.bg)
+        g_set(c4 + 1, LIST_Y + i - 1, pad(line:gsub("§.", ""), W - c4), C.text, C.bg)
       end
     end
   end
