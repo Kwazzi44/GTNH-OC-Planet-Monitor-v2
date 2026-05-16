@@ -63,13 +63,14 @@ function stats.update(lsc_addr)
       elseif proxy.getSensorInformation then
         -- Парсим из текстовых строк сенсора
         local info = proxy.getSensorInformation()
-        for _, line in ipairs(info) do
-          -- Ищем "EU Stored: 1,234,567 EU"
-          local stored = line:match("EU Stored:%s*([%d,%.]+)")
+        for _, raw_line in ipairs(info) do
+          local line = raw_line:gsub("§.", "")
+          -- Ищем Stored
+          local stored = line:match("EU Stored:%s*([%d,%.]+)") or line:match("Stored Energy:%s*([%d,%.]+)") or line:match("Stored:%s*([%d,%.]+)")
           if stored then s = tonumber(stored:gsub("[,%.]", "")) or s end
           
-          -- Ищем "Total Capacity: 1,234,567 EU"
-          local cap = line:match("Total Capacity:%s*([%d,%.]+)")
+          -- Ищем Capacity
+          local cap = line:match("Total Capacity:%s*([%d,%.]+)") or line:match("Max Energy:%s*([%d,%.]+)") or line:match("Capacity:%s*([%d,%.]+)")
           if cap then m = tonumber(cap:gsub("[,%.]", "")) or m end
         end
       end
@@ -77,6 +78,14 @@ function stats.update(lsc_addr)
       if m == 0 then
         if not stats._debug_sent then
           require("logger").log("STATS", nil, "LSC: No data found in sensors!")
+          if proxy.getSensorInformation then
+            local p_ok, info = pcall(proxy.getSensorInformation)
+            if p_ok and type(info) == "table" then
+              for _, line in ipairs(info) do
+                require("logger").log("STATS", nil, "LSC SENSOR: " .. tostring(line))
+              end
+            end
+          end
           stats._debug_sent = true
         end
       end

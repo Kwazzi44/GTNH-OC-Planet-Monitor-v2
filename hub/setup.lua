@@ -164,7 +164,7 @@ local function viewScan()
   
   local free_a = {}
   for _, gm in ipairs(adapters) do
-    if not taken_a[gm.addr] and not registry.isIgnored(gm.addr) then table.insert(free_a, gm) end
+    if not taken_a[gm.addr] and not registry.isIgnored(gm.addr) and gm.addr ~= config.lsc_address then table.insert(free_a, gm) end
   end
   
   if #free_a == 0 then
@@ -417,6 +417,7 @@ local function drawMainMenu(sel)
 end
 
 local function run()
+  load_config()
   registry.load()
   clear()
   
