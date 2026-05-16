@@ -174,6 +174,11 @@ function gui.drawPlanetList(planets, sel, scroll, stats)
   for i = 0, LIST_H - 1 do
     local idx = scroll + i
     local ry  = LIST_Y + i
+    
+    -- Рисуем боковые рамки для всех строк списка
+    g_set(1, ry, "║", C.border, C.bg)
+    g_set(W, ry, "║", C.border, C.bg)
+    
     if idx <= #planets then
       local p = planets[idx]
       local isSel = (idx == sel)
@@ -188,7 +193,8 @@ function gui.drawPlanetList(planets, sel, scroll, stats)
         if m.active then active = active + 1 end
       end
 
-      g_fill(1, ry, W, 1, " ", fg, bg)
+      -- Заполняем только внутреннюю часть, не затирая рамку
+      g_fill(2, ry, W - 2, 1, " ", fg, bg)
       g_set(c1, ry, string.format("%02d", idx), C.dim, bg)
       g_set(c2, ry, pad(p.name or "?", c3 - c2 - 2), fg, bg)
       g_set(c3, ry, STATUS_LABEL[st] or st, scol, bg)
@@ -271,6 +277,11 @@ function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
   for i = 0, LIST_H - 1 do
     local idx = scroll + i
     local ry  = LIST_Y + i
+    
+    -- Рисуем боковые рамки
+    g_set(1, ry, "║", C.border, C.bg)
+    g_set(W, ry, "║", C.border, C.bg)
+    
     if idx <= #machines then
       local m = machines[idx]
       local isSel = (idx == sel)
@@ -279,7 +290,7 @@ function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
       local mcol = m.active and C.ok or C.ring_down
       local mst = m.active and ">> ACTIVE" or (m.error or "-- IDLE")
 
-      g_fill(1, ry, c4 - 1, 1, " ", fg, bg)
+      g_fill(2, ry, c4 - 3, 1, " ", fg, bg)
       g_set(c1, ry, string.format("%02d", idx), C.dim, bg)
       g_set(c2, ry, pad(m.name or "?", c3 - c2 - 2), fg, bg)
       g_set(c3, ry, mst, mcol, bg)
