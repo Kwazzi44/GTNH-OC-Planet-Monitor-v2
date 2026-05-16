@@ -65,13 +65,15 @@ function stats.update(lsc_addr)
         local info = proxy.getSensorInformation()
         for _, raw_line in ipairs(info) do
           local line = raw_line:gsub("§.", "")
-          -- Ищем Stored
-          local stored = line:match("EU Stored:%s*([%d,%.]+)") or line:match("Stored Energy:%s*([%d,%.]+)") or line:match("Stored:%s*([%d,%.]+)")
-          if stored then s = tonumber(stored:gsub("[,%.]", "")) or s end
-          
-          -- Ищем Capacity
-          local cap = line:match("Total Capacity:%s*([%d,%.]+)") or line:match("Max Energy:%s*([%d,%.]+)") or line:match("Capacity:%s*([%d,%.]+)")
-          if cap then m = tonumber(cap:gsub("[,%.]", "")) or m end
+          if not line:match("x10%^") then
+            -- Ищем Stored
+            local stored = line:match("EU Stored:%s*([%d,%.]+)") or line:match("Stored Energy:%s*([%d,%.]+)") or line:match("Stored:%s*([%d,%.]+)")
+            if stored then s = tonumber(stored:gsub("[,%.]", "")) or s end
+            
+            -- Ищем Capacity
+            local cap = line:match("Total Capacity:%s*([%d,%.]+)") or line:match("Max Energy:%s*([%d,%.]+)") or line:match("Capacity:%s*([%d,%.]+)")
+            if cap then m = tonumber(cap:gsub("[,%.]", "")) or m end
+          end
         end
       end
 

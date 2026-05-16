@@ -34,14 +34,25 @@ local C = {
 }
 
 local config = {}
+local config_path = "config.lua"
+
 local function load_config()
-  if require("filesystem").exists("/home/hub/config.lua") then
-    config = dofile("/home/hub/config.lua")
+  local fs = require("filesystem")
+  local pwd = os.getenv("PWD") or ""
+  if fs.exists(pwd .. "/config.lua") then
+    config_path = pwd .. "/config.lua"
+  elseif fs.exists("/home/hub/config.lua") then
+    config_path = "/home/hub/config.lua"
+  end
+
+  if fs.exists(config_path) then
+    local ok, cfg = pcall(dofile, config_path)
+    if ok and type(cfg) == "table" then config = cfg end
   end
 end
 
 local function save_config()
-  local f = io.open("/home/hub/config.lua", "w")
+  local f = io.open(config_path, "w")
   if f then
     f:write("-- =============================================================================\n")
     f:write("-- hub/config.lua — GTNH Planet Monitor Configuration\n")
