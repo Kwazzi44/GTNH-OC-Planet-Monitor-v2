@@ -47,7 +47,7 @@ local runSetup, safeOnKey, safeOnTouch
 
 local function pollAll()
   for pname, planet in pairs(registry.getAll()) do
-    if pname ~= "__ignored__" then
+    if pname ~= "__ignored__" and pname ~= "__system__" then
       local all_missing = (#planet.machines > 0)
       local any_offline = false
       local any_problem = false
