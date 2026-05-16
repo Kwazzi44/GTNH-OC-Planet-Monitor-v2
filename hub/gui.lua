@@ -139,7 +139,7 @@ function gui.clear()
   g_fill(1, 1, W, H, " ", C.text, C.bg)
 end
 
-function gui.drawPlanets(planets, sel, scroll, stats)
+function gui.drawPlanetList(planets, sel, scroll, stats)
   g_fill(1, 5, W, H-5, " ", C.text, C.bg)
   
   local total_nodes = 0
