@@ -319,6 +319,12 @@ runSetup = function()
   event.listen("key_down", safeOnKey)
   event.listen("touch", safeOnTouch)
 
+  package.loaded["config"] = nil
+  config = require("config")
+  
+  -- Сбросить закешированный lsc_addr
+  ui.lsc_addr = config.lsc_address
+  
   registry.load()
   ui.dirty = true
 end
