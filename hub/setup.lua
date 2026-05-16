@@ -18,6 +18,11 @@ if not gpu then
   return
 end
 
+local max_w, max_h = gpu.maxResolution()
+local target_w, target_h = 80, 25
+if max_w < target_w then target_w = max_w end
+if max_h < target_h then target_h = max_h end
+gpu.setResolution(target_w, target_h)
 local W, H = gpu.getResolution()
 local LEFT_W = 25
 

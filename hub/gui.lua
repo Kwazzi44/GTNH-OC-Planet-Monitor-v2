@@ -127,6 +127,14 @@ function gui.init()
   if not component.isAvailable("gpu") then return false end
   _gpu = component.gpu
   _gpu.setDepth(_gpu.maxDepth())
+  
+  -- Устанавливаем комфортное разрешение 80x25 для читаемости
+  local max_w, max_h = _gpu.maxResolution()
+  local target_w, target_h = 80, 25
+  if max_w < target_w then target_w = max_w end
+  if max_h < target_h then target_h = max_h end
+  _gpu.setResolution(target_w, target_h)
+  
   W, H = _gpu.getResolution()
   g_fill(1, 1, W, H, " ", C.text, C.bg)
   return true
