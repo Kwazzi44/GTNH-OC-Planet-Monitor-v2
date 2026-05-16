@@ -138,6 +138,19 @@ local function doRestartMachine()
   setNotify((ok and "[OK] " or "[FAIL] ") .. msg, ok and 0x00DD55 or 0xFF2244)
 end
 
+local function doToggleMachine()
+  local p = registry.get(ui.detail_planet)
+  if not p then return end
+  if p.status == "RING_DOWN" then
+    setNotify("Ring DOWN! Cannot toggle.", 0xFF2244); return
+  end
+  local m = (p.machines or {})[ui.machine_sel]
+  if not m then return end
+  local ok, msg = mch.toggle(m)
+  logger.log(p.name, m.name, "TOGGLE -> " .. (ok and "OK: " or "FAIL: ") .. msg)
+  setNotify((ok and "[OK] " or "[FAIL] ") .. msg, ok and 0x00DD55 or 0xFF2244)
+end
+
 local function doRestartAll()
   local pname = (ui.view == VIEW.DETAIL) and ui.detail_planet
     or (registry.getPlanetList()[ui.planet_sel] or {}).name
@@ -189,6 +202,10 @@ local function onKey(_, _, char, code)
   -- A → restart all (code 30) - оставим A, но только в VIEW.PLANETS/DETAIL
   if code == 30 then
     doRestartAll(); return
+  end
+  -- T → toggle
+  if (char == 116 or char == 84) and ui.view == VIEW.DETAIL then
+    doToggleMachine(); return
   end
   -- F1 → setup (code 59)
   if code == 59 and ui.view == VIEW.PLANETS then
@@ -250,10 +267,10 @@ local function onTouch(_, _, x, y, button, playerName)
       elseif x >= 70 then onKey(nil, nil, string.byte("s"), nil) -- S (Setup)
       end
     elseif ui.view == VIEW.DETAIL then
-      if x >= 19 and x <= 34 then onKey(nil, nil, nil, 28) -- Enter (Restart)
-      elseif x >= 35 and x <= 49 then onKey(nil, nil, string.byte("a"), nil) -- A (RestartAll)
-      elseif x >= 50 and x <= 58 then onKey(nil, nil, string.byte("b"), nil) -- B (Back)
-      elseif x >= 59 then onKey(nil, nil, string.byte("q"), nil) -- Q (Quit)
+      if x >= 11 and x <= 26 then onKey(nil, nil, nil, 28) -- Enter (Restart)
+      elseif x >= 27 and x <= 37 then onKey(nil, nil, string.byte("t"), nil) -- T (Toggle)
+      elseif x >= 38 and x <= 53 then onKey(nil, nil, string.byte("a"), nil) -- A (RestartAll)
+      elseif x >= 2 and x <= 10 then onKey(nil, nil, string.byte("b"), nil) -- B (Back)
       end
     elseif ui.view == VIEW.LOG then
       if x >= 15 and x <= 22 then onKey(nil, nil, nil, 199) -- Home

@@ -287,7 +287,7 @@ function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
     end
   end
 
-  drawFooter({{"B", "Back"}, {"Enter", "Restart"}, {"A", "Restart All"}})
+  drawFooter({{"B", "Back"}, {"Enter", "Restart"}, {"T", "Toggle"}, {"A", "Restart All"}})
 end
 
 function gui.drawLog(lines, scroll)

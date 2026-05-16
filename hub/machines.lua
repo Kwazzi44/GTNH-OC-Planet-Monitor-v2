@@ -265,6 +265,65 @@ function machines.restart(m)
   end
 end
 
+--- Включить/выключить машину (Toggle)
+-- @param m  table  Запись машины из registry
+-- @return ok bool, msg string
+function machines.toggle(m)
+  local proxy
+  if m.adapter_addr then
+    proxy = component.proxy(m.adapter_addr)
+  end
+
+  -- Software API toggle
+  if proxy and proxy.setWorkAllowed then
+    local ok, err = pcall(function()
+      local current = true
+      if proxy.isWorkAllowed ~= nil then
+        current = proxy.isWorkAllowed()
+      end
+      proxy.setWorkAllowed(not current)
+    end)
+    if ok then
+      return true, "Toggled via API (setWorkAllowed)"
+    end
+  end
+
+  -- Hardware Redstone toggle
+  local r = m.redstone
+  if not r or not r.addr or r.side == nil then
+    return false, "No redstone config and API toggle failed/unavailable"
+  end
+  local rs = rsProxy(r.addr)
+  if not rs then return false, "Redstone component not found" end
+
+  local all_sides = (r.side == -1)
+  local sides     = all_sides and {0,1,2,3,4,5} or {r.side}
+  local color     = r.color
+
+  local ok, err = pcall(function()
+    -- Читаем текущий уровень сигнала с первой стороны
+    local current_val = 0
+    local first_side = sides[1]
+    if color then
+      local out = rs.getBundledOutput(first_side)
+      current_val = out[color] or 0
+    else
+      current_val = rs.getOutput(first_side) or 0
+    end
+
+    local is_on = (current_val > 0)
+    
+    if is_on then
+      for _, s in ipairs(sides) do rsLow(rs, s, color) end
+    else
+      for _, s in ipairs(sides) do rsHigh(rs, s, color) end
+    end
+  end)
+
+  if ok then return true, "Toggled Redstone State" end
+  return false, tostring(err)
+end
+
 --- Сбросить все редстоун-выходы по всем планетам реестра (при старте)
 function machines.resetAllRedstone(planet_list)
   local done = {}
