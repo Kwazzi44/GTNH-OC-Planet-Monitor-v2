@@ -195,7 +195,7 @@ local function viewScan()
     drawText(rx, 4, "Type:    " .. gm.name)
     drawText(rx, 5, "Address: " .. string.sub(gm.addr, 1, 16) .. "...")
     
-    drawText(rx, 7, "Action: (y)es, (n)o, (i)gnore")
+    drawText(rx, 7, "Action: (y)es, (n)o, (i)gnore, (l)sc")
     local ans = readInput(rx, 8, "> ", "")
     local l_ans = ans:lower()
     if l_ans == "y" then
@@ -213,6 +213,11 @@ local function viewScan()
       registry.ignoreAdapter(gm.addr)
       drawText(rx, 10, "Ignored! Won't show up in scan anymore.", C.dim)
       os.sleep(1)
+    elseif l_ans == "l" then
+      config.lsc_address = gm.addr
+      save_config()
+      drawText(rx, 10, "LSC successfully bound to this adapter!", C.ok)
+      os.sleep(1.5)
     end
   end
 end
