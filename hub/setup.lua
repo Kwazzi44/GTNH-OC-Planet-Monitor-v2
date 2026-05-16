@@ -222,65 +222,6 @@ local function viewScan()
   end
 end
 
-local function setup_lsc()
-  load_config()
-  clearRight()
-  header("CONFIGURE ENERGY MONITOR (LSC)")
-  local rx = LEFT_W + 3
-  
-  local candidates = {}
-  local ok, list = pcall(component.list)
-  if not ok then return end
-
-  -- Собираем список всех УЖЕ занятых адресов
-  local taken = {}
-  local p_list = registry.getPlanetList() or {}
-  for _, p in ipairs(p_list) do
-    for _, m in ipairs(p.machines or {}) do
-      if m.adapter_addr then taken[m.adapter_addr] = true end
-    end
-  end
-
-  for addr, name in list do
-    if not taken[addr] and addr ~= component.gpu.address and addr ~= component.screen.address then
-      table.insert(candidates, {addr = addr, name = name})
-    end
-  end
-
-  if #candidates == 0 then
-    drawText(rx, 4, "No available adapters found.", C.warn)
-    drawText(rx, 6, "Press Enter to back...", C.dim)
-    while true do local _,_,_,c = event.pull("key_down") if c == 28 then break end end
-    return
-  end
-
-  drawText(rx, 4, "Select the adapter for LSC:", C.title)
-  for i, c in ipairs(candidates) do
-    if i > 12 then break end 
-    drawText(rx, 4+i, string.format("%d. [%s] %s...", i, c.name, string.sub(c.addr, 1, 8)))
-  end
-  
-  local last_y = 5 + math.min(#candidates, 12)
-  drawText(rx, last_y, "99. Manual Entry (Enter full UUID)", C.key)
-  
-  local ans = readInput(rx, last_y + 2, "Selection (0 to cancel) > ", "")
-  local idx = tonumber(ans)
-  
-  if idx == 99 then
-    local full_id = readInput(rx, last_y + 4, "Enter full ID: ", "")
-    if #full_id > 10 then
-      config.lsc_address = full_id
-      save_config()
-      drawText(rx, last_y + 6, "[OK] LSC bound to manual ID!", C.ok)
-      os.sleep(1.5)
-    end
-  elseif idx and idx > 0 and idx <= #candidates then
-    config.lsc_address = candidates[idx].addr
-    save_config()
-    drawText(rx, last_y + 4, "[OK] LSC bound!", C.ok)
-    os.sleep(1)
-  end
-end
 
 local function viewDatabase()
   local rx = LEFT_W + 3
@@ -411,7 +352,6 @@ end
 
 local MENU_ITEMS = {
   { label = "Scan New Machines",  fn = viewScan },
-  { label = "Configure LSC",      fn = setup_lsc },
   { label = "Manage Database",    fn = viewDatabase },
   { label = "Exit Setup Wizard",  fn = function() return "exit" end },
 }
