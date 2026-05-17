@@ -71,6 +71,6 @@ if fail_n == 0 then
 
   -- autorun.lua is now downloaded automatically
   io.write("\nInstallation complete!\n")
-  io.write("Step 1:  lua /home/hub/setup.lua   (first time only)\n")
-  io.write("Step 2:  lua /home/hub/main.lua\n\n")
+  io.write("To start, run:\n")
+  io.write("lua /home/hub/main.lua\n\n")
 end
