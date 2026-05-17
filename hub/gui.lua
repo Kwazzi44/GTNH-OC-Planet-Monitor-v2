@@ -266,13 +266,12 @@ function gui.drawPlanetList(planets, sel, scroll, stats)
   end
 
   drawFooter({
-    {"Enter", "Open"},
-    {"A",     "Rst"},
+    {"Enter", "Details"},
+    {"A",     "Restart"},
+    {"F3",    "Refresh"},
     {"F4",    "Log"},
-    {"F3",    "Rfsh"},
-    {"F5",    "Upd"},
+    {"F5",    "Update"},
     {"F1",    "Setup"},
-    {"Q",     "Quit"},
   })
 end
 
