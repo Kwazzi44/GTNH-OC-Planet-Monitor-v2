@@ -271,27 +271,54 @@ end
 function machines.toggle(m)
   local proxy
   if m.adapter_addr then
-    proxy = component.proxy(m.adapter_addr)
+    local pok, p = pcall(component.proxy, m.adapter_addr)
+    if pok then proxy = p end
   end
 
-  -- Software API toggle
-  if proxy and proxy.setWorkAllowed then
-    local ok, err = pcall(function()
-      local current = true
-      if proxy.isWorkAllowed ~= nil then
-        current = proxy.isWorkAllowed()
-      end
-      proxy.setWorkAllowed(not current)
-    end)
+  if not proxy then
+    return false, "Adapter not found: " .. tostring(m.adapter_addr and m.adapter_addr:sub(1,8) or "nil")
+  end
+
+  -- Попытка 1: setWorkAllowed (основной GT/GTNH API)
+  if type(proxy.setWorkAllowed) == "function" then
+    local current = true
+    if type(proxy.isWorkAllowed) == "function" then
+      local ok2, val = pcall(proxy.isWorkAllowed)
+      if ok2 and type(val) == "boolean" then current = val end
+    end
+    local ok, err = pcall(proxy.setWorkAllowed, not current)
     if ok then
-      return true, "Toggled via API (setWorkAllowed)"
+      return true, (current and "Disabled" or "Enabled") .. " via setWorkAllowed"
     end
   end
 
-  -- Hardware Redstone toggle
+  -- Попытка 2: setActive
+  if type(proxy.setActive) == "function" then
+    local current = m.active
+    local ok, err = pcall(proxy.setActive, not current)
+    if ok then
+      return true, (current and "Disabled" or "Enabled") .. " via setActive"
+    end
+  end
+
+  -- Попытка 3: enable/disable
+  if m.active and type(proxy.disable) == "function" then
+    local ok, err = pcall(proxy.disable)
+    if ok then return true, "Disabled via disable()" end
+  elseif not m.active and type(proxy.enable) == "function" then
+    local ok, err = pcall(proxy.enable)
+    if ok then return true, "Enabled via enable()" end
+  end
+
+  -- Попытка 4: Redstone Hardware
   local r = m.redstone
   if not r or not r.addr or r.side == nil then
-    return false, "No redstone config and API toggle failed/unavailable"
+    -- Дебаг: перечисляем что есть в proxy
+    local methods = {}
+    for k, v in pairs(proxy) do
+      if type(v) == "function" then table.insert(methods, k) end
+    end
+    return false, "No API (tried: setWorkAllowed,setActive,enable/disable). Methods: " .. table.concat(methods, ",")
   end
   local rs = rsProxy(r.addr)
   if not rs then return false, "Redstone component not found" end
@@ -301,7 +328,6 @@ function machines.toggle(m)
   local color     = r.color
 
   local ok, err = pcall(function()
-    -- Читаем текущий уровень сигнала с первой стороны
     local current_val = 0
     local first_side = sides[1]
     if color then
@@ -310,9 +336,7 @@ function machines.toggle(m)
     else
       current_val = rs.getOutput(first_side) or 0
     end
-
     local is_on = (current_val > 0)
-    
     if is_on then
       for _, s in ipairs(sides) do rsLow(rs, s, color) end
     else

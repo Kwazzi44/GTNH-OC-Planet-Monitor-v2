@@ -149,6 +149,13 @@ local function doToggleMachine()
   local ok, msg = mch.toggle(m)
   logger.log(p.name, m.name, "TOGGLE -> " .. (ok and "OK: " or "FAIL: ") .. msg)
   setNotify((ok and "[OK] " or "[FAIL] ") .. msg, ok and 0x00DD55 or 0xFF2244)
+  -- Немедленное обновление статуса для этой машины
+  if ok then
+    local active, err = mch.getStatus(m)
+    m.active = active
+    m.error  = err
+    ui.dirty = true
+  end
 end
 
 local function doRestartAll()
@@ -203,8 +210,8 @@ local function onKey(_, _, char, code)
   if code == 30 then
     doRestartAll(); return
   end
-  -- T → toggle
-  if (char == 116 or char == 84) and ui.view == VIEW.DETAIL then
+  -- T → toggle (скан-код 20, char 116=t 84=T)
+  if (code == 20 or char == 116 or char == 84) and ui.view == VIEW.DETAIL then
     doToggleMachine(); return
   end
   -- F1 → setup (code 59)
