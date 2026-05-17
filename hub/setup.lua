@@ -205,7 +205,7 @@ local PLANET_LIST = {
   "[T8] Kepler 22b", "[T8] Kepler 47c", "[T8] Kepler 62e", "[T8] Kepler 62f",
   "[T8] Sirius B", "[T8] Sirius C", "[T8] Centauri A", "[T8] Vega B", "[T8] Arcturus",
   "[T8] Antares", "[T8] Betelgeuse", "[T8] Rigel", "[T8] Aldebaran", "[T8] Polaris", 
-  "[T9] Neper"
+  "[T9] Neper", "[T9] Horus", "[T9] Maahes", "[T9] Anubis", "[T9] Seth", "[T9] Mehen Belt"
 }
 
 local function pickPlanet(x, y, prompt)
