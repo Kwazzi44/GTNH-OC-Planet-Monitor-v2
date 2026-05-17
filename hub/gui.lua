@@ -95,33 +95,45 @@ local function timeAgo(t)
 end
 
 local function drawHeader(title, subtitle)
-  -- Массивная шапка
-  g_fill(1, 1, W, 3, " ", C.title, C.header_bg)
-  local deco = "══[ " .. title .. " ]" .. string.rep("═", W - #title - 8)
-  g_set(2, 2, deco, C.title, C.header_bg)
+  -- Верхняя рамка
+  g_set(1, 1, "╔" .. string.rep("═", W - 2) .. "╗", C.border, C.bg)
   
+  -- Строка заголовка
+  g_set(1, 2, "║", C.border, C.bg)
+  local deco = "══[ " .. title .. " ]" .. string.rep("═", W - #title - 6)
+  g_set(2, 2, deco, C.title, C.bg)
+  g_set(W, 2, "║", C.border, C.bg)
+  
+  -- Строка подзаголовка
+  g_set(1, 3, "║", C.border, C.bg)
   if subtitle then
-    g_set(4, 3, "STATUS: " .. subtitle, C.dim, C.header_bg)
+    g_set(3, 3, "STATUS: " .. subtitle, C.dim, C.bg)
   end
-  
-  -- Разделительная линия
-  g_fill(1, 4, W, 1, " ", C.bg, C.bg)
-  g_set(1, 4, string.rep("─", W), C.border, C.bg)
+  g_set(W, 3, "║", C.border, C.bg)
 end
 
 local function drawFooter(keys)
-  g_fill(1, H-1, W, 1, " ", C.bg, C.bg)
-  g_set(1, H-1, string.rep("─", W), C.border, C.bg)
+  -- Разделитель перед кнопками
+  g_set(1, H - 2, "╠" .. string.rep("═", W - 2) .. "╣", C.border, C.bg)
   
-  g_fill(1, H, W, 1, " ", C.dim, C.header_bg)
-  local x = 2
+  -- Кнопки в подвале (на предпоследней строке)
+  g_set(1, H - 1, "║", C.border, C.bg)
+  local x = 3
   for _, k in ipairs(keys) do
     if x >= W - 5 then break end
-    g_set(x, H, "[" .. k[1] .. "]", C.key, C.header_bg)
-    x = x + #k[1] + 2
-    g_set(x, H, k[2], C.text, C.header_bg)
+    g_set(x, H - 1, "[" .. k[1] .. "]", C.key, C.bg)
+    x = x + #k[1] + 1
+    g_set(x, H - 1, k[2], C.text, C.bg)
     x = x + #k[2] + 2
   end
+  -- Заполняем пустоту до конца строки
+  if x < W then
+    g_set(x, H - 1, string.rep(" ", W - x), C.text, C.bg)
+  end
+  g_set(W, H - 1, "║", C.border, C.bg)
+  
+  -- Нижняя рамка (на самой последней строке)
+  g_set(1, H, "╚" .. string.rep("═", W - 2) .. "╝", C.border, C.bg)
 end
 
 -- ─── API ───────────────────────────────────────────────────────────────────
@@ -140,7 +152,7 @@ function gui.clear()
 end
 
 function gui.drawPlanetList(planets, sel, scroll, stats)
-  g_fill(1, 5, W, H-5, " ", C.text, C.bg)
+  g_fill(1, 4, W, H-4, " ", C.text, C.bg)
   
   local total_nodes = 0
   for _, p in ipairs(planets) do
@@ -149,26 +161,33 @@ function gui.drawPlanetList(planets, sel, scroll, stats)
 
   drawHeader("GTNH PLANET MONITOR V2.0", string.format("ONLINE - %d NODES", total_nodes))
 
-  local HY = 5
-  g_fill(1, HY, W, 1, " ", C.dim, C.header_bg)
+  -- Заголовки колонок на строке 4
+  local HY = 4
   
-  -- Динамическое распределение колонок
-  local c1 = 2                 -- #
-  local c2 = 6                 -- PLANET NAME
+  -- Динамическое распределение колонок (сдвинуто на 1 вправо для красоты)
+  local c1 = 3                 -- #
+  local c2 = 7                 -- PLANET NAME
   local c3 = math.floor(W * 0.3) -- STATUS
   local c4 = math.floor(W * 0.45) -- ACTIVITY
   local c5 = math.floor(W * 0.65) -- SEEN
   local c6 = math.floor(W * 0.8)  -- MACHINES
   
-  g_set(c1, HY, "#",  C.dim, C.header_bg)
-  g_set(c2, HY, "PLANET NAME", C.dim, C.header_bg)
-  g_set(c3, HY, "STATUS", C.dim, C.header_bg)
-  g_set(c4, HY, "ACTIVITY", C.dim, C.header_bg)
-  g_set(c5, HY, "SEEN", C.dim, C.header_bg)
-  g_set(c6, HY, "MACHINES", C.dim, C.header_bg)
+  -- Рисуем боковые рамки для строки заголовков
+  g_set(1, HY, "║", C.border, C.bg)
+  g_set(W, HY, "║", C.border, C.bg)
+  
+  g_set(c1, HY, "#",  C.dim, C.bg)
+  g_set(c2, HY, "PLANET NAME", C.dim, C.bg)
+  g_set(c3, HY, "STATUS", C.dim, C.bg)
+  g_set(c4, HY, "ACTIVITY", C.dim, C.bg)
+  g_set(c5, HY, "SEEN", C.dim, C.bg)
+  g_set(c6, HY, "MACHINES", C.dim, C.bg)
 
-  local LIST_Y = HY + 1
-  local LIST_H = H - LIST_Y - 5 -- Увеличено место под статистику
+  -- Разделитель на строке 5
+  g_set(1, 5, "╠" .. string.rep("═", W - 2) .. "╣", C.border, C.bg)
+
+  local LIST_Y = 6
+  local LIST_H = H - LIST_Y - 5 -- 5 строк зарезервировано под подвал и статусы
   scroll = scroll or 1
 
   for i = 0, LIST_H - 1 do
@@ -211,9 +230,16 @@ function gui.drawPlanetList(planets, sel, scroll, stats)
     end
   end
 
-  -- Stats Panel
-  local STAT_Y = H - 4
-  g_fill(1, STAT_Y-1, W, 1, " ", C.bg, C.bg)
+  -- Панель статистики
+  local STAT_Y = H - 5
+  -- Разделитель над статистикой
+  g_set(1, STAT_Y, "╠" .. string.rep("═", W - 2) .. "╣", C.border, C.bg)
+  
+  -- Боковые рамки для строк статистики
+  g_set(1, STAT_Y + 1, "║", C.border, C.bg)
+  g_set(W, STAT_Y + 1, "║", C.border, C.bg)
+  g_set(1, STAT_Y + 2, "║", C.border, C.bg)
+  g_set(W, STAT_Y + 2, "║", C.border, C.bg)
   
   -- Server Stats
   g_set(c2, STAT_Y + 1, "SERVER ", C.dim, C.bg)
@@ -246,31 +272,37 @@ function gui.drawPlanetList(planets, sel, scroll, stats)
 end
 
 function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
-  g_fill(1, 5, W, H-5, " ", C.text, C.bg)
+  g_fill(1, 4, W, H-4, " ", C.text, C.bg)
 
   local st    = planet.status or "UNKNOWN"
   local scol  = STATUS_COLOR[st] or C.unknown
 
   drawHeader(tostring(planet.name or "?") .. " STATUS", STATUS_LABEL[st] or st)
 
-  local HY = 5
+  -- Заголовки колонок на строке 4
+  local HY = 4
   
   -- Динамическое распределение для деталей
-  local c1 = 2
-  local c2 = 5
+  local c1 = 3
+  local c2 = 6
   local c3 = math.floor(W * 0.4)
   local c4 = math.floor(W * 0.55)
   
-  g_fill(1, HY, c4 - 1, 1, " ", C.dim, C.header_bg)
-  g_set( c1, HY, "#",  C.dim, C.header_bg)
-  g_set( c2, HY, "MACHINE",  24, C.dim, C.header_bg)
-  g_set( c3, HY, "STATE",   15, C.dim, C.header_bg)
+  -- Рисуем боковые рамки для строки заголовков
+  g_set(1, HY, "║", C.border, C.bg)
+  g_set(W, HY, "║", C.border, C.bg)
+  
+  g_set( c1, HY, "#",  C.dim, C.bg)
+  g_set( c2, HY, "MACHINE",  C.dim, C.bg)
+  g_set( c3, HY, "STATE",   C.dim, C.bg)
 
-  g_fill(c4, HY, W-c4+1, 1, " ", C.title, C.header_bg)
-  g_set(c4 + 1, HY, "TELEMETRY", C.title, C.header_bg)
+  g_set(c4 + 1, HY, "TELEMETRY", C.title, C.bg)
 
-  local LIST_Y = HY + 1
-  local LIST_H = H - LIST_Y - 1
+  -- Разделитель на строке 5
+  g_set(1, 5, "╠" .. string.rep("═", W - 2) .. "╣", C.border, C.bg)
+
+  local LIST_Y = 6
+  local LIST_H = H - LIST_Y - 2 -- 2 строки под подвал (separator + keys)
   local machines = planet.machines or {}
   scroll = scroll or 1
 
