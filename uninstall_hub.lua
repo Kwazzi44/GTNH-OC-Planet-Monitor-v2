@@ -21,7 +21,7 @@ local function delDir(path)
   print("Deleted dir: " .. path)
 end
 
-print("GTNH Planet Monitor
+print("GTNH Planet Monitor -- UNINSTALLER")
 print("This will delete ALL files including data!")
 io.write("Are you sure? [y/n]: ")
 local a = io.read()

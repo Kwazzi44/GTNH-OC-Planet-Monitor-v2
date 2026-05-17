@@ -385,7 +385,7 @@ runUpdate = function()
     gpu.setBackground(0x000000); gpu.setForeground(0xFFFFFF)
     local w, h = gpu.getResolution()
     gpu.fill(1, 1, w, h, " ")
-    gpu.set(2, 2, "GTNH Planet Monitor
+    gpu.set(2, 2, "GTNH Planet Monitor -- Updating...")
     gpu.set(2, 3, "Downloading latest files from GitHub...")
   end
 

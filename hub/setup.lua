@@ -296,7 +296,7 @@ end
 local function viewScan()
   local rx = LEFT_W + 3
   clearRight()
-  rightHeader("--- SCANNING NETWORK
+  rightHeader("--- SCANNING NETWORK ---")
   gset(rx, 8, "Scanning...", C.dim, C.bg)
 
   local adapters = mch.scanNetwork()
@@ -311,7 +311,7 @@ local function viewScan()
   end
 
   clearRight()
-  rightHeader("--- SCAN RESULTS
+  rightHeader("--- SCAN RESULTS ---")
 
   if #free_a == 0 then
     gset(rx, 8, "No unregistered GT machines found.", C.warn, C.bg)
@@ -327,7 +327,7 @@ local function viewScan()
 
   for i, gm in ipairs(free_a) do
     clearRight()
-    rightHeader("--- MACHINE " .. i .. "/" .. #free_a .. "
+    rightHeader("--- MACHINE " .. i .. "/" .. #free_a .. " ---")
     gset(rx, 8,  "Type:    " .. pad(gm.name, 40), C.text, C.bg)
     gset(rx, 9,  "Address: " .. string.sub(gm.addr, 1, 20) .. "...", C.dim, C.bg)
     gset(rx, 11, "(y) Register   (n) Skip   (i) Ignore   (l) Set as LSC", C.dim, C.bg)
@@ -372,7 +372,7 @@ local function viewDatabase()
   while in_db do
     local planets = registry.getPlanetList()
     clearRight()
-    rightHeader("--- DATABASE
+    rightHeader("--- DATABASE ---")
 
     if #planets == 0 then
       gset(rx, 8, "Registry is empty.", C.dim, C.bg)
@@ -421,7 +421,7 @@ local function viewDatabase()
       elseif code == 211 then
         local p = planets[sel_p]
         clearRight()
-        rightHeader("--- DELETE PLANET?
+        rightHeader("--- DELETE PLANET? ---")
         gset(rx, 8, "Delete planet: " .. p.name .. "?", C.warn, C.bg)
         local ans = readInput(rx, 10, "Confirm (y/n): ", "")
         if ans:lower() == "y" then
@@ -435,7 +435,7 @@ local function viewDatabase()
         local in_machines = true
         while in_machines do
           clearRight()
-          rightHeader("--- " .. p.name:upper() .. "
+          rightHeader("--- " .. p.name:upper() .. " ---")
           local mlist = p.machines or {}
           
           for j = 0, list_h - 1 do
