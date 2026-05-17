@@ -27,7 +27,7 @@ local FILES = {
   { "/hub/main.lua",        "/home/hub/main.lua"      },
   { "/update_hub.lua",      "/home/update_hub.lua"    },
   { "/uninstall_hub.lua",   "/home/uninstall_hub.lua" },
-  { "/autorun.lua",         "/home/autorun.lua"       },
+  { "/autorun.lua",         "/autorun.lua"            },
 }
 
 local function mkdirs(dest)

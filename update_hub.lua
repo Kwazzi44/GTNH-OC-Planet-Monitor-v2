@@ -4,7 +4,7 @@
 
 
 
-local REPO = "https://raw.githubusercontent.com/Kwazzi44/GTNH-OC-Planet-Monitor/main"
+local REPO = "https://raw.githubusercontent.com/Kwazzi44/GTNH-OC-Planet-Monitor-v2/main"
 
 local component  = require("component")
 local filesystem = require("filesystem")
@@ -26,6 +26,7 @@ local FILES = {
   { "/hub/main.lua",      "/home/hub/main.lua"      },
   { "/update_hub.lua",    "/home/update_hub.lua"    },
   { "/uninstall_hub.lua", "/home/uninstall_hub.lua" },
+  { "/autorun.lua",       "/autorun.lua"            },
 }
 
 local function mkdirs(dest)
