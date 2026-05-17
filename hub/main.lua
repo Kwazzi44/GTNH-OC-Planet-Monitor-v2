@@ -41,7 +41,7 @@ local _running    = true
 local _last_poll  = 0
 
 -- Предварительное объявление для разрешения кольцевых зависимостей
-local runSetup, safeOnKey, safeOnTouch
+local runSetup, runUpdate, safeOnKey, safeOnTouch
 
 -- ─── Polling ──────────────────────────────────────────────────────────────
 
@@ -216,6 +216,10 @@ local function onKey(_, _, char, code)
   if (code == 20 or char == 116 or char == 84) and ui.view == VIEW.DETAIL then
     doToggleMachine(); return
   end
+  -- F2 → update + reboot (code 60)
+  if code == 60 and ui.view == VIEW.PLANETS then
+    runUpdate(); return
+  end
   -- F1 → setup (code 59)
   if code == 59 and ui.view == VIEW.PLANETS then
     runSetup(); return
@@ -353,6 +357,37 @@ runSetup = function()
   
   registry.load()
   ui.dirty = true
+end
+
+runUpdate = function()
+  setNotify("Updating... please wait", 0x4477FF)
+  event.ignore("key_down", safeOnKey)
+  event.ignore("touch",    safeOnTouch)
+
+  if component.isAvailable("gpu") then
+    local gpu = component.gpu
+    gpu.setBackground(0x000000); gpu.setForeground(0xFFFFFF)
+    local w, h = gpu.getResolution()
+    gpu.fill(1, 1, w, h, " ")
+    gpu.set(2, 2, "GTNH Planet Monitor -- Updating...")
+    gpu.set(2, 3, "Downloading latest files from GitHub...")
+  end
+
+  local shell = require("shell")
+  local ok, err = pcall(shell.execute, "/home/update_hub.lua")
+
+  if component.isAvailable("gpu") then
+    local gpu = component.gpu
+    if ok then
+      gpu.set(2, 5, "[OK] Update complete! Rebooting in 3s...")
+    else
+      gpu.set(2, 5, "[FAIL] " .. tostring(err))
+      gpu.set(2, 6, "Rebooting anyway in 3 seconds...")
+    end
+  end
+
+  os.sleep(3)
+  computer.shutdown(true)  -- true = reboot
 end
 
 -- ─── Keyboard ─────────────────────────────────────────────────────────────
