@@ -190,6 +190,107 @@ local function readInput(x, y, prompt, default)
   end
 end
 
+-- ─── База данных планет GTNH ────────────────────────────────────────────────
+
+local PLANET_LIST = {
+  "Overworld", "Moon", "Mars", "Asteroids", "Venus", "Mercury", 
+  "Jupiter", "Europa", "Ganymede", "Callisto", 
+  "Saturn", "Titan", "Enceladus", 
+  "Uranus", "Miranda", "Oberon", 
+  "Neptune", "Triton", 
+  "Pluto", "Kuiper Belt", "Haumea", "Makemake", "Eris",
+  "Ceres", "Phobos", "Deimos",
+  "Proxima B", "Barnarda C", "Barnarda E", "Barnarda F",
+  "Ross 128 B", "Ross 128 C", "Tau Ceti F",
+  "Kepler 22b", "Kepler 47c", "Kepler 62e", "Kepler 62f",
+  "Sirius B", "Sirius C", "Centauri A", "Vega B", "Arcturus",
+  "Antares", "Betelgeuse", "Rigel", "Aldebaran", "Polaris"
+}
+
+local function pickPlanet(x, y, prompt)
+  gset(x, y, prompt, C.dim, C.bg)
+  local px = x + #prompt
+  local input = ""
+  local sel = 1
+  local max_show = 5
+  
+  while true do
+    local matches = {}
+    local raw_map = {}
+    
+    if input ~= "" then
+      local disp = input .. " [Custom]"
+      table.insert(matches, disp)
+      raw_map[disp] = input
+    end
+    
+    local lower_input = input:lower()
+    for _, name in ipairs(PLANET_LIST) do
+      if input == "" or name:lower():find(lower_input, 1, true) then
+        if name ~= input then
+          table.insert(matches, name)
+          raw_map[name] = name
+        end
+      end
+    end
+    
+    if sel > #matches then sel = math.max(1, #matches) end
+    if #matches == 0 then sel = 1 end
+    
+    -- Отрисовка ввода
+    gfill(px, y, W-px-1, 1, " ", C.text, C.bg)
+    gset(px, y, input .. "_", C.title, C.bg)
+    
+    -- Отрисовка подсказок
+    for i = 1, max_show do
+      local my = y + 1 + i
+      gfill(x, my, W-x-1, 1, " ", C.text, C.bg)
+      if i <= #matches then
+        local name = matches[i]
+        local label = "  " .. name
+        if i == sel then
+          label = "> " .. name
+          gset(x, my, label, C.sel_fg, C.sel_bg)
+        else
+          gset(x, my, label, C.text, C.bg)
+        end
+      end
+    end
+    
+    local ev = table.pack(event.pull())
+    if ev[1] == "key_down" then
+      local char, code = ev[3], ev[4]
+      if code == 28 then -- Enter
+        local res = input
+        if #matches > 0 and sel <= #matches then
+          local selected = matches[sel]
+          res = raw_map[selected] or input
+        end
+        -- Стираем подсказки перед выходом
+        for i = 1, max_show do
+          gfill(x, y + 1 + i, W-x-1, 1, " ", C.text, C.bg)
+        end
+        gfill(px, y, W-px-1, 1, " ", C.text, C.bg)
+        gset(px, y, res, C.ok, C.bg)
+        return res
+      elseif code == 14 and unicode.len(input) > 0 then -- Backspace
+        input = unicode.sub(input, 1, -2)
+        sel = 1
+      elseif code == 200 then -- Up
+        if sel > 1 then sel = sel - 1 end
+      elseif code == 208 then -- Down
+        if sel < #matches and sel < max_show then sel = sel + 1 end
+      elseif char > 31 then
+        input = input .. unicode.char(char)
+        sel = 1
+      end
+    elseif ev[1] == "clipboard" and ev[3] then
+      input = input .. ev[3]
+      sel = 1
+    end
+  end
+end
+
 -- ─── SCAN VIEW ──────────────────────────────────────────────────────────────
 
 local function buildTaken()
@@ -246,7 +347,7 @@ local function viewScan()
     local la  = ans:lower()
 
     if la == "y" then
-      local pname = readInput(rx, 14, "Planet name: ", "Earth")
+      local pname = pickPlanet(rx, 14, "Planet name: ")
       local mname = readInput(rx, 15, "Machine name: ", gm.name)
       registry.addPlanet(pname)
       registry.addMachine(pname, { name = mname, adapter_addr = gm.addr })
