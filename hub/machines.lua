@@ -81,7 +81,8 @@ function machines.scanNetwork()
           for _, line in ipairs(s_data) do
             local clean = line:gsub("§.", "")
             local lower = clean:lower()
-            if lower:match("progress:") or lower:match("problems") or lower:match("efficiency:") then
+            if lower:match("progress:") or lower:match("problems") or lower:match("efficiency:") or
+               lower:match("прогресс:") or lower:match("проблемы") or lower:match("эффективность:") then
               is_controller = true
             end
           end
@@ -149,25 +150,28 @@ function machines.getStatus(m)
       local clean = line:gsub("§.", "")
       
 
-      local prob_count = clean:match("Problems:%s*(%d+)")
+      local prob_count = clean:match("Problems:%s*(%d+)") or clean:match("Проблемы:%s*(%d+)")
       if prob_count and tonumber(prob_count) > 0 then
         has_problem = true
       end
 
 
       if active == nil then
-        if clean:match("Progress:") then
+        if clean:match("Progress:") or clean:match("Прогресс:") then
           local p1, p2 = clean:match("Progress:%s*(%d+)%s*s?%s*/%s*(%d+)")
+          if not p1 then
+            p1, p2 = clean:match("Прогресс:%s*(%d+)%s*s?%s*/%s*(%d+)")
+          end
           if p1 and p2 and (tonumber(p1) > 0 or tonumber(p2) > 0) then
             active = true
           end
-        elseif clean:match("Efficiency:") then
-          local eff = clean:match("Efficiency:%s*(%d+%.?%d*)")
+        elseif clean:match("Efficiency:") or clean:match("Эффективность:") then
+          local eff = clean:match("Efficiency:%s*(%d+%.?%d*)") or clean:match("Эффективность:%s*(%d+%.?%d*)")
           if eff and tonumber(eff) > 0 then
             active = true
           end
-        elseif clean:match("EU/t:") or clean:match("EU/t required:") then
-          local eut = clean:match("EU/t:?%s*([%d,]+)") or clean:match("EU/t required:%s*([%d,]+)")
+        elseif clean:match("EU/t:") or clean:match("EU/t required:") or clean:match("ЕЭ/т:") or clean:match("Требуется ЕЭ/т:") then
+          local eut = clean:match("EU/t:?%s*([%d,]+)") or clean:match("EU/t required:%s*([%d,]+)") or clean:match("ЕЭ/т:?%s*([%d,]+)") or clean:match("Требуется ЕЭ/т:?%s*([%d,]+)")
           if eut then
             eut = eut:gsub(",", "")
             if tonumber(eut) and tonumber(eut) > 0 then active = true end
