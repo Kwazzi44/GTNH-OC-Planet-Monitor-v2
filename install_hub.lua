@@ -1,9 +1,9 @@
--- =============================================================================
--- install_hub.lua — Hub Installer
--- =============================================================================
--- Запуск (нужна Internet Card):
---   wget -q https://raw.githubusercontent.com/Kwazzi44/GTNH-OC-Planet-Monitor/main/install_hub.lua /tmp/ih.lua
---   lua /tmp/ih.lua
+
+
+
+
+
+
 
 local REPO = "https://raw.githubusercontent.com/Kwazzi44/GTNH-OC-Planet-Monitor/main"
 
@@ -68,7 +68,7 @@ end
 io.write(string.format("\nDone: %d OK, %d FAILED\n", ok_n, fail_n))
 
 if fail_n == 0 then
-  -- Создать autorun
+
   io.write("\nCreate /home/autorun.lua to auto-start on boot? [y/n]: ")
   local a = io.read()
   if a and a:lower() == "y" then

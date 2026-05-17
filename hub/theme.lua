@@ -1,34 +1,34 @@
--- =============================================================================
--- hub/theme.lua — Shared UI Theme and Primitives
--- =============================================================================
+
+
+
 
 local theme = {}
 
 local gpu = nil
 local W, H = 80, 25
 
--- ─── Палитра цветов (Solarized Dark) ─────────────────────────────────────────
+
 
 theme.C = {
-  bg        = 0x002B36, -- Base03
-  header_bg = 0x073642, -- Base02
-  sel_bg    = 0x073642, -- Base02
-  sel_fg    = 0x268BD2, -- Blue
-  text      = 0x839496, -- Base0
-  dim       = 0x586E75, -- Base01
-  border    = 0x1D6680, -- Teal
-  title     = 0x268BD2, -- Blue (Bright)
-  key       = 0xB58900, -- Yellow
+  bg        = 0x002B36,
+  header_bg = 0x073642,
+  sel_bg    = 0x073642,
+  sel_fg    = 0x268BD2,
+  text      = 0x839496,
+  dim       = 0x586E75,
+  border    = 0x1D6680,
+  title     = 0x268BD2,
+  key       = 0xB58900,
   key_bg    = 0x002B36,
 
-  ok        = 0x859900, -- Green
-  warn      = 0xB58900, -- Yellow
-  ring_down = 0xDC322F, -- Red
-  unknown   = 0x586E75, -- Base01
-  partial   = 0x2AA198  -- Cyan
+  ok        = 0x859900,
+  warn      = 0xB58900,
+  ring_down = 0xDC322F,
+  unknown   = 0x586E75,
+  partial   = 0x2AA198
 }
 
--- ─── Инициализация ───────────────────────────────────────────────────────────
+
 
 function theme.init(custom_gpu)
   gpu = custom_gpu
@@ -41,7 +41,7 @@ function theme.getRes()
   return W, H
 end
 
--- ─── Примитивы рисования ────────────────────────────────────────────────────
+
 
 function theme.gset(x, y, text, fg, bg)
   if not gpu then return end
@@ -68,18 +68,18 @@ end
 function theme.drawHeader(title, subtitle)
   if not gpu then return end
   local C = theme.C
-  -- Верхняя рамка
+
   theme.gset(1, 1, "+" .. string.rep("-", W - 2) .. "+", C.border, C.bg)
 
-  -- Строка заголовка: "| ==[ TITLE ]========...= |"
+
   theme.gset(1, 2, "|", C.border, C.bg)
-  local inner = W - 2  -- ширина внутри рамки
+  local inner = W - 2
   local tag = "==[ " .. title .. " ]"
   local fill = string.rep("=", math.max(0, inner - #tag))
   theme.gset(2, 2, tag .. fill, C.title, C.bg)
   theme.gset(W, 2, "|", C.border, C.bg)
 
-  -- Строка подзаголовка
+
   theme.gset(1, 3, "|", C.border, C.bg)
   theme.gfill(2, 3, W - 2, 1, " ", C.dim, C.bg)
   if subtitle then

@@ -1,6 +1,6 @@
--- =============================================================================
--- hub/main.lua — Entry Point: Polling Loop + GUI
--- =============================================================================
+
+
+
 
 package.path = "/home/hub/?.lua;" .. package.path
 
@@ -17,7 +17,7 @@ local gui      = require("gui")
 local stats    = require("stats")
 local theme    = require("theme")
 
--- ─── UI State ─────────────────────────────────────────────────────────────
+
 
 local VIEW = { PLANETS = 1, DETAIL = 2, LOG = 3 }
 
@@ -28,24 +28,24 @@ local ui = {
   machine_sel   = 1,
   machine_scroll= 1,
   log_scroll    = nil,
-  detail_planet = nil,   -- имя планеты в detail-view
+  detail_planet = nil,
   dirty         = true,
   full_redraw   = true,
-  notify        = nil,   -- { msg, color, until_t }
+  notify        = nil,
   last_draw     = 0,
   sensor_data       = nil,
   last_sensor_poll  = 0,
   last_sensor_maddr = nil,
-  lsc_addr          = nil, -- адрес лапотронника
+  lsc_addr          = nil,
 }
 
 local _running    = true
 local _last_poll  = 0
 
--- Предварительное объявление для разрешения кольцевых зависимостей
+
 local runSetup, runUpdate, safeOnKey, safeOnTouch
 
--- ─── Polling ──────────────────────────────────────────────────────────────
+
 
 local function pollAll()
   for pname, planet in pairs(registry.getAll()) do
@@ -62,9 +62,9 @@ local function pollAll()
         m.error  = err
 
         if err == "RING_DOWN" then
-          -- компонент полностью исчез из OC-сети, all_missing остаётся true
+
         else
-          all_missing = false   -- компонент виден в сети, значит кольцо цело
+          all_missing = false
         end
 
         if err == "MAINTENANCE" then
@@ -75,13 +75,13 @@ local function pollAll()
           any_offline = true
         end
 
-        -- Лог изменений статуса машины
+
         if prev_active ~= active then
           logger.log(pname, m.name, active and "ACTIVE" or "OFFLINE")
         end
       end
 
-      -- Вычислить статус планеты
+
       local new_status
       if #planet.machines == 0 then
         new_status = "UNKNOWN"
@@ -107,7 +107,7 @@ local function pollAll()
   ui.dirty = true
 end
 
--- ─── Helpers ──────────────────────────────────────────────────────────────
+
 
 local function clamp(v, lo, hi) return math.max(lo, math.min(hi, v)) end
 
@@ -123,9 +123,9 @@ local function setNotify(msg, color)
   ui.dirty  = true
 end
 
-local LIST_H = 15  -- приблизительно, gui.lua уточняет
+local LIST_H = 15
 
--- ─── Actions ──────────────────────────────────────────────────────────────
+
 
 local function doRestartMachine()
   local p = registry.get(ui.detail_planet)
@@ -149,9 +149,9 @@ local function doToggleMachine()
   local m = (p.machines or {})[ui.machine_sel]
   if not m then return end
   local ok, msg = mch.toggle(m)
-  -- Полный момент идёт в лог (F4 → Log)
+
   logger.log(p.name, m.name, "TOGGLE -> " .. (ok and "OK: " or "FAIL: ") .. msg)
-  -- В уведомлении — короткая версия (макс 40 симв)
+
   local short = msg:len() > 40 and (msg:sub(1, 38) .. "...") or msg
   setNotify((ok and "[OK] " or "[ERR] ") .. short, ok and 0x00DD55 or 0xFF2244)
   if ok then
@@ -192,42 +192,42 @@ local function openDetail()
   ui.full_redraw    = true
 end
 
--- ─── Keyboard & Mouse Handlers ──────────────────────────────────────────
+
 
 local function onKey(_, _, char, code)
-  -- Q → выход (code 16 или Esc = 1)
+
   if code == 16 or code == 1 then
     _running = false; return
   end
-  -- B → назад (code 48 или Backspace = 14)
+
   if code == 48 or code == 14 then
     ui.view = VIEW.PLANETS; ui.dirty = true; ui.full_redraw = true; return
   end
-  -- F4 → лог (code 62)
+
   if code == 62 then
     ui.log_scroll = nil; ui.view = VIEW.LOG; ui.dirty = true; ui.full_redraw = true; return
   end
-  -- F3 → poll сейчас (code 61)
+
   if code == 61 then
     pollAll(); setNotify("Refreshed", 0x4477FF); return
   end
-  -- A → restart all (code 30) - оставим A, но только в VIEW.PLANETS/DETAIL
+
   if code == 30 then
     doRestartAll(); return
   end
-  -- T → toggle (скан-код 20, char 116=t 84=T)
+
   if (code == 20 or char == 116 or char == 84) and ui.view == VIEW.DETAIL then
     doToggleMachine(); return
   end
-  -- F5 → update + reboot (code 63)
+
   if code == 63 and ui.view == VIEW.PLANETS then
     runUpdate(); return
   end
-  -- F1 → setup (code 59)
+
   if code == 59 and ui.view == VIEW.PLANETS then
     runSetup(); return
   end
-  -- ENTER
+
   if code == 28 then
     if ui.view == VIEW.PLANETS then openDetail()
     elseif ui.view == VIEW.DETAIL then doRestartMachine()
@@ -235,7 +235,7 @@ local function onKey(_, _, char, code)
     return
   end
 
-  -- Навигация
+
   local UP   = (code == 200)
   local DOWN = (code == 208)
   local HOME = (code == 199)
@@ -272,35 +272,35 @@ local function onTouch(_, _, x, y, button, playerName)
     ui.dirty = true
     return
   end
-  if button ~= 0 then return end -- Only left click
+  if button ~= 0 then return end
   
   local W, H = theme.getRes()
-  -- Footer click (y == H - 1)
+
   if y == H - 1 then
     if ui.view == VIEW.PLANETS then
-      if x >= 3 and x < 22 then onKey(nil, nil, nil, 28) -- Enter (Details)
-      elseif x >= 22 and x < 37 then onKey(nil, nil, nil, 30) -- A (Restart)
-      elseif x >= 37 and x < 53 then onKey(nil, nil, nil, 61) -- F3 (Refresh)
-      elseif x >= 53 and x < 65 then onKey(nil, nil, nil, 62) -- F4 (Log)
-      elseif x >= 65 and x < 80 then onKey(nil, nil, nil, 63) -- F5 (Update)
-      elseif x >= 80 then onKey(nil, nil, nil, 59) -- F1 (Setup)
+      if x >= 3 and x < 22 then onKey(nil, nil, nil, 28)
+      elseif x >= 22 and x < 37 then onKey(nil, nil, nil, 30)
+      elseif x >= 37 and x < 53 then onKey(nil, nil, nil, 61)
+      elseif x >= 53 and x < 65 then onKey(nil, nil, nil, 62)
+      elseif x >= 65 and x < 80 then onKey(nil, nil, nil, 63)
+      elseif x >= 80 then onKey(nil, nil, nil, 59)
       end
     elseif ui.view == VIEW.DETAIL then
-      if x >= 3 and x < 15 then onKey(nil, nil, string.byte("b"), nil) -- B (Back)
-      elseif x >= 15 and x < 34 then onKey(nil, nil, nil, 28) -- Enter (Restart)
-      elseif x >= 34 and x < 48 then onKey(nil, nil, string.byte("t"), nil) -- T (Toggle)
-      elseif x >= 48 then onKey(nil, nil, nil, 30) -- A (Restart All)
+      if x >= 3 and x < 15 then onKey(nil, nil, string.byte("b"), nil)
+      elseif x >= 15 and x < 34 then onKey(nil, nil, nil, 28)
+      elseif x >= 34 and x < 48 then onKey(nil, nil, string.byte("t"), nil)
+      elseif x >= 48 then onKey(nil, nil, nil, 30)
       end
     elseif ui.view == VIEW.LOG then
-      if x >= 3 and x < 17 then onKey(nil, nil, nil, 199) -- Home
-      elseif x >= 17 and x < 33 then onKey(nil, nil, nil, 207) -- End
-      elseif x >= 33 then onKey(nil, nil, string.byte("b"), nil) -- B (Back)
+      if x >= 3 and x < 17 then onKey(nil, nil, nil, 199)
+      elseif x >= 17 and x < 33 then onKey(nil, nil, nil, 207)
+      elseif x >= 33 then onKey(nil, nil, string.byte("b"), nil)
       end
     end
     return
   end
 
-  -- List click (y >= 6 and y < H-1)
+
   if y >= 6 and y < H - 1 then
     local list_idx = y - 6
     if ui.view == VIEW.PLANETS then
@@ -341,7 +341,7 @@ runSetup = function()
     local w,h = gpu.getResolution()
     gpu.fill(1,1,w,h," ")
   end
-  -- Отключаем слушатели на время работы другого скрипта
+
   event.ignore("key_down", safeOnKey)
   event.ignore("touch", safeOnTouch)
 
@@ -351,19 +351,19 @@ runSetup = function()
     io.write("[ERROR] Setup failed: " .. tostring(err) .. "\n")
   end
 
-  -- Возвращаем слушатели
+
   event.listen("key_down", safeOnKey)
   event.listen("touch", safeOnTouch)
 
   package.loaded["config"] = nil
   config = require("config")
   
-  -- Сбросить закешированный lsc_addr
+
   ui.lsc_addr = config.lsc_address
   
   registry.load()
 
-  -- Очищаем экран цветом UI (0x002B36), чтобы убрать черноту после сетапа
+
   if component.isAvailable("gpu") then
     local gpu = component.gpu
     gpu.setBackground(0x002B36)
@@ -385,7 +385,7 @@ runUpdate = function()
     gpu.setBackground(0x000000); gpu.setForeground(0xFFFFFF)
     local w, h = gpu.getResolution()
     gpu.fill(1, 1, w, h, " ")
-    gpu.set(2, 2, "GTNH Planet Monitor -- Updating...")
+    gpu.set(2, 2, "GTNH Planet Monitor
     gpu.set(2, 3, "Downloading latest files from GitHub...")
   end
 
@@ -403,13 +403,13 @@ runUpdate = function()
   end
 
   os.sleep(3)
-  computer.shutdown(true)  -- true = reboot
+  computer.shutdown(true)
 end
 
--- ─── Keyboard ─────────────────────────────────────────────────────────────
 
 
--- ─── Draw ─────────────────────────────────────────────────────────────────
+
+
 
 local function draw()
   local planets = registry.getPlanetList()
@@ -454,7 +454,7 @@ local function draw()
   ui.last_draw = computer.uptime()
 end
 
--- ─── Init ────────────────────────────────────────────────────────────────
+
 
 local function init()
   if not gui.init() then
@@ -471,7 +471,7 @@ local function init()
 
   local planets = registry.getPlanetList()
   if #planets == 0 then
-    -- Нет планет — запустить setup
+
     io.write("[INFO] No planets configured. Running setup...\n")
     os.sleep(1)
     runSetup()
@@ -481,16 +481,16 @@ local function init()
     end
   end
 
-  -- Сбросить все редстоун-выходы
+
   mch.resetAllRedstone(planets)
 
-  -- Первый опрос
+
   pollAll()
 
   return true
 end
 
--- ─── Main Loop ────────────────────────────────────────────────────────────
+
 
 local function mainLoop()
   local keyListen = event.listen("key_down", safeOnKey)
@@ -500,14 +500,14 @@ local function mainLoop()
     local now = computer.uptime()
 
     local ok, err = pcall(function()
-      -- Обновление статистики (TPS, LSC)
+
       if ui.view == VIEW.PLANETS then
         local lsc_addr = registry.getLSC()
         if lsc_addr then
           ui.lsc_addr = lsc_addr
         else
           ui.lsc_addr = nil
-          -- Авто-поиск если не настроено точечно
+
           local function check(addr)
             local p = component.proxy(addr)
             if p then
@@ -524,13 +524,13 @@ local function mainLoop()
         stats.update(ui.lsc_addr)
       end
 
-      -- Автополлинг сети
+
       if (now - _last_poll) >= config.poll_interval then
         pollAll()
         _last_poll = now
       end
 
-      -- Асинхронный поллинг сенсоров для выделенной машины (раз в 1 сек)
+
       if ui.view == VIEW.DETAIL and ui.detail_planet then
         local p = registry.get(ui.detail_planet)
         if p and p.machines then
@@ -546,7 +546,7 @@ local function mainLoop()
         end
       end
 
-      -- Перерисовка
+
       if ui.dirty then
         draw()
       elseif (now - ui.last_draw) >= config.gui_refresh then
@@ -568,7 +568,7 @@ local function mainLoop()
   event.ignore("key_down", safeOnKey)
   event.ignore("touch", safeOnTouch)
 
-  -- Восстановить терминал
+
   if component.isAvailable("gpu") then
     local gpu = component.gpu
     gpu.setBackground(0x000000); gpu.setForeground(0xFFFFFF)
@@ -578,7 +578,7 @@ local function mainLoop()
   end
 end
 
--- ─── Entry ────────────────────────────────────────────────────────────────
+
 
 if init() then
   mainLoop()

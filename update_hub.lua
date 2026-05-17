@@ -1,8 +1,8 @@
--- =============================================================================
--- update_hub.lua — Обновление файлов Hub с GitHub
--- =============================================================================
--- Скачивает свежие версии всех скриптов. Реестр и лог НЕ трогает.
--- Запуск: lua /home/update_hub.lua
+
+
+
+
+
 
 local REPO = "https://raw.githubusercontent.com/Kwazzi44/GTNH-OC-Planet-Monitor/main"
 
@@ -37,7 +37,7 @@ end
 
 local function download(url, dest)
   mkdirs(dest)
-  -- ?v=random разбивает кэш GitHub CDN
+
   local bust = "?v=" .. tostring(math.random(1000000, 9999999))
   local ok, err = pcall(function()
     local resp = internet.request(url .. bust)

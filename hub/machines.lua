@@ -1,13 +1,13 @@
--- =============================================================================
--- hub/machines.lua — Direct Component Access: Status & Restart
--- =============================================================================
+
+
+
 
 local component = require("component")
 local os        = require("os")
 
 local machines = {}
 
--- ─── GT методы для чтения статуса ────────────────────────────────────────
+
 
 local STATUS_METHODS = { "isMachineActive", "isActive", "isWorking", "hasWork" }
 
@@ -21,7 +21,7 @@ local function readActive(proxy)
   return nil
 end
 
--- ─── Redstone helpers ─────────────────────────────────────────────────────
+
 
 local function rsProxy(rs_addr)
   if not rs_addr then return nil end
@@ -53,10 +53,10 @@ local function rsLow(rs, side, color)
   end
 end
 
--- ─── Публичный API ────────────────────────────────────────────────────────
 
---- Сканировать все gt_machine компоненты в сети
--- Возвращает список { addr, name, active }
+
+
+
 function machines.scanNetwork()
   local GT_NAME_METHODS = { "getMachineName", "getName", "getBlockName", "getInventoryName", "getCustomName" }
   local result = {}
@@ -74,7 +74,7 @@ function machines.scanNetwork()
       end
       local is_controller = false
       
-      -- Пытаемся вытащить имя из сенсора и определить, контроллер ли это
+
       if proxy.getSensorInformation then
         local ok_s, s_data = pcall(proxy.getSensorInformation)
         if ok_s and type(s_data) == "table" then
@@ -88,7 +88,7 @@ function machines.scanNetwork()
           
           if (name == "Unknown" or is_controller) and s_data[1] then
             local clean = s_data[1]:gsub("§.", "")
-            clean = clean:match("^%s*(.-)%s*$") -- Trim spaces
+            clean = clean:match("^%s*(.-)%s*$")
             if clean and clean ~= "" and not clean:match(":") then
               name = clean
             end
@@ -96,7 +96,7 @@ function machines.scanNetwork()
         end
       end
       
-      -- Финальный фоллбэк, если имя так и не нашлось
+
       if name == "Unknown" then
         name = is_controller and "Unknown Controller" or "Hatch/Hull"
       end
@@ -109,7 +109,7 @@ function machines.scanNetwork()
   return result
 end
 
---- Сканировать все redstone компоненты в сети
+
 function machines.scanRedstone()
   local result = {}
   for addr, _ in component.list("redstone") do
@@ -118,22 +118,22 @@ function machines.scanRedstone()
   return result
 end
 
---- Обновить статус одной машины
--- Возвращает: active bool, err string?
--- err == "RING_DOWN" означает что компонент исчез из сети
--- err == другое  означает что компонент есть но что-то не так
+
+
+
+
 function machines.getStatus(m)
-  -- Шаг 1: проверить что адрес вообще есть в сети
+
   local exists = false
   for addr, _ in component.list() do
     if addr == m.adapter_addr then exists = true; break end
   end
 
   if not exists then
-    return false, "RING_DOWN"   -- компонент исчез из OC-сети
+    return false, "RING_DOWN"
   end
 
-  -- Шаг 2: получить proxy и прочитать статус
+
   local ok, proxy = pcall(component.proxy, m.adapter_addr)
   if not ok or not proxy then
     return false, "Adapter proxy error"
@@ -142,19 +142,19 @@ function machines.getStatus(m)
   local active = readActive(proxy)
   local has_problem = false
 
-  -- Проверяем сенсоры на наличие проблем (Maintenance)
+
   local s_ok, s_data = pcall(proxy.getSensorInformation)
   if s_ok and type(s_data) == "table" then
     for _, line in ipairs(s_data) do
-      local clean = line:gsub("§.", "") -- убираем цветовые коды
+      local clean = line:gsub("§.", "")
       
-      -- Ищем "Problems: X"
+
       local prob_count = clean:match("Problems:%s*(%d+)")
       if prob_count and tonumber(prob_count) > 0 then
         has_problem = true
       end
 
-      -- Если active еще не определен (nil), пробуем вытащить его из данных сенсора
+
       if active == nil then
         if clean:match("Progress:") then
           local p1, p2 = clean:match("Progress:%s*(%d+)%s*s?%s*/%s*(%d+)")
@@ -169,11 +169,11 @@ function machines.getStatus(m)
         elseif clean:match("EU/t:") or clean:match("EU/t required:") then
           local eut = clean:match("EU/t:?%s*([%d,]+)") or clean:match("EU/t required:%s*([%d,]+)")
           if eut then
-            eut = eut:gsub(",", "") -- убираем запятые из чисел
+            eut = eut:gsub(",", "")
             if tonumber(eut) and tonumber(eut) > 0 then active = true end
           end
         elseif clean:match("%d+L/s") or clean:match("%d+%s*L/s") then
-          -- Если есть выход в литрах в секунду (например, 1000L/s)
+
           active = true
         end
       end
@@ -183,14 +183,14 @@ function machines.getStatus(m)
   if active == nil then active = false end
 
   if has_problem then
-    return active, "MAINTENANCE" -- Машина работает, но есть проблемы
+    return active, "MAINTENANCE"
   end
 
   return active, nil
 end
 
---- Получить данные сенсоров машины
--- @return table(string) или nil, err
+
+
 function machines.getSensorData(m)
   if not m.adapter_addr then return nil, "No adapter address" end
   local proxy = component.proxy(m.adapter_addr)
@@ -202,17 +202,17 @@ function machines.getSensorData(m)
   return data
 end
 
---- Перезапустить машину через Redstone
--- rs_side = -1 означает "все стороны" (broadcast)
--- @param m  table  Запись машины из registry
--- @return ok bool, msg string
+
+
+
+
 function machines.restart(m)
   local proxy
   if m.adapter_addr then
     proxy = component.proxy(m.adapter_addr)
   end
 
-  -- Software API restart
+
   if proxy and proxy.setWorkAllowed then
     local ok, err = pcall(function()
       proxy.setWorkAllowed(false)
@@ -224,7 +224,7 @@ function machines.restart(m)
     end
   end
 
-  -- Hardware Redstone restart
+
   local r = m.redstone
   if not r or not r.addr or r.side == nil then
     return false, "No redstone config and API restart failed/unavailable"
@@ -269,9 +269,9 @@ function machines.restart(m)
   end
 end
 
---- Включить/выключить машину (Toggle)
--- @param m  table  Запись машины из registry
--- @return ok bool, msg string
+
+
+
 function machines.toggle(m)
   local proxy
   if m.adapter_addr then
@@ -283,7 +283,7 @@ function machines.toggle(m)
     return false, "Adapter not found: " .. tostring(m.adapter_addr and m.adapter_addr:sub(1,8) or "nil")
   end
 
-  -- Попытка 1: setWorkAllowed (основной GT/GTNH API)
+
   if proxy and proxy.setWorkAllowed then
     local current = true
     if proxy.isWorkAllowed then
@@ -296,7 +296,7 @@ function machines.toggle(m)
     end
   end
 
-  -- Попытка 2: setActive
+
   if proxy and proxy.setActive then
     local ok, err = pcall(function() proxy.setActive(not m.active) end)
     if ok then
@@ -304,7 +304,7 @@ function machines.toggle(m)
     end
   end
 
-  -- Попытка 3: enable/disable
+
   if m.active and proxy and proxy.disable then
     local ok = pcall(function() proxy.disable() end)
     if ok then return true, "Disabled via disable()" end
@@ -313,10 +313,10 @@ function machines.toggle(m)
     if ok then return true, "Enabled via enable()" end
   end
 
-  -- Попытка 4: Redstone Hardware
+
   local r = m.redstone
   if not r or not r.addr or r.side == nil then
-    -- Дебаг: получить реальный список методов через component.methods()
+
     local methods_t = {}
     local ok_m, cm = pcall(component.methods, m.adapter_addr)
     if ok_m and type(cm) == "table" then
@@ -347,7 +347,7 @@ function machines.toggle(m)
   return false, tostring(err)
 end
 
---- Сбросить все редстоун-выходы по всем планетам реестра (при старте)
+
 function machines.resetAllRedstone(planet_list)
   local done = {}
   for _, p in ipairs(planet_list) do

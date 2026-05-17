@@ -1,6 +1,6 @@
--- =============================================================================
--- hub/setup.lua — Setup Wizard (hub GUI style)
--- =============================================================================
+
+
+
 
 local component = require("component")
 local event     = require("event")
@@ -14,7 +14,7 @@ if not gpu then io.write("GPU not found!\n"); return end
 
 local W, H = gpu.getResolution()
 
--- ─── Цвета — идентичны gui.lua ──────────────────────────────────────────────
+
 
 local theme = require("theme")
 local C = theme.C
@@ -22,7 +22,7 @@ local C = theme.C
 local config = {}
 local config_path = "/home/hub/config.lua"
 
--- ─── Config I/O ─────────────────────────────────────────────────────────────
+
 
 local function load_config()
   local fs = require("filesystem")
@@ -52,47 +52,47 @@ local function save_config()
   f:close()
 end
 
--- ─── Примитивы рисования ────────────────────────────────────────────────────
+
 
 local function gset(x, y, text, fg, bg) theme.gset(x, y, text, fg, bg) end
 local function gfill(x, y, w, h, ch, fg, bg) theme.gfill(x, y, w, h, ch, fg, bg) end
 local function pad(s, n) return theme.pad(s, n) end
 
--- ─── Общий каркас экрана ────────────────────────────────────────────────────
 
-local LEFT_W = 22   -- ширина левой панели меню
+
+local LEFT_W = 22
 
 local function drawFrame()
   gfill(1, 1, W, H, " ", C.text, C.bg)
 
-  -- Верхняя рамка
+
   gset(1, 1, "+" .. string.rep("-", W-2) .. "+", C.border, C.bg)
-  -- Строка заголовка
+
   gset(1, 2, "|", C.border, C.bg)
   local tag = "==[ GTNH PLANET MONITOR - SETUP ]"
   local fill = string.rep("=", math.max(0, W-2 - #tag))
   gset(2, 2, tag .. fill, C.title, C.bg)
   gset(W, 2, "|", C.border, C.bg)
-  -- Строка подзаголовка
+
   gset(1, 3, "|", C.border, C.bg)
   gfill(2, 3, W-2, 1, " ", C.dim, C.bg)
   gset(3, 3, "STATUS: Setup Wizard", C.dim, C.bg)
   gset(W, 3, "|", C.border, C.bg)
-  -- Разделитель под заголовком
+
   gset(1, 4, "+" .. string.rep("-", W-2) .. "+", C.border, C.bg)
 
-  -- Боковые рамки от строки 5 до H-3
+
   for row = 5, H-3 do
     gset(1, row, "|", C.border, C.bg)
     gset(W, row, "|", C.border, C.bg)
   end
 
-  -- Вертикальный разделитель меню
+
   for row = 4, H-3 do
     gset(LEFT_W + 1, row, "|", C.border, C.bg)
   end
 
-  -- Меню слева
+
   gset(2, 5, "MENU", C.dim, C.bg)
 end
 
@@ -114,7 +114,7 @@ end
 
 local function clearRight()
   gfill(LEFT_W+2, 5, W-LEFT_W-2, H-7, " ", C.text, C.bg)
-  -- Восстанавливаем правые боковые рамки
+
   for row = 5, H-3 do
     gset(W, row, "|", C.border, C.bg)
   end
@@ -138,7 +138,7 @@ local function rightHeader(txt)
   gset(LEFT_W+3, 6, string.rep("-", W-LEFT_W-4), C.border, C.bg)
 end
 
--- ─── Ввод строки ────────────────────────────────────────────────────────────
+
 
 local function readInput(x, y, prompt, default)
   gset(x, y, prompt, C.dim, C.bg)
@@ -172,7 +172,7 @@ local function readInput(x, y, prompt, default)
   end
 end
 
--- ─── База данных планет GTNH ────────────────────────────────────────────────
+
 
 local PLANET_LIST = {
   "[T0] Overworld", "[T1] Moon", "[T2] Mars", "[T2] Phobos", "[T2] Deimos",
@@ -222,11 +222,11 @@ local function pickPlanet(x, y, prompt)
     if #matches == 0 then sel = 1 end
     
     if dirty then
-      -- Отрисовка ввода
+
       gfill(px, y, W-px-1, 1, " ", C.text, C.bg)
       gset(px, y, input .. "_", C.title, C.bg)
       
-      -- Отрисовка подсказок
+
       for i = 1, max_show do
         local my = y + 1 + i
         gfill(x, my, W-x-1, 1, " ", C.text, C.bg)
@@ -247,26 +247,26 @@ local function pickPlanet(x, y, prompt)
     local ev = table.pack(event.pull())
     if ev[1] == "key_down" then
       local char, code = ev[3], ev[4]
-      if code == 28 then -- Enter
+      if code == 28 then
         local res = input
         if #matches > 0 and sel <= #matches then
           local selected = matches[sel]
           res = raw_map[selected] or input
         end
-        -- Стираем подсказки перед выходом
+
         for i = 1, max_show do
           gfill(x, y + 1 + i, W-x-1, 1, " ", C.text, C.bg)
         end
         gfill(px, y, W-px-1, 1, " ", C.text, C.bg)
         gset(px, y, res, C.ok, C.bg)
         return res
-      elseif code == 14 and unicode.len(input) > 0 then -- Backspace
+      elseif code == 14 and unicode.len(input) > 0 then
         input = unicode.sub(input, 1, -2)
         sel = 1
         dirty = true
-      elseif code == 200 then -- Up
+      elseif code == 200 then
         if sel > 1 then sel = sel - 1; dirty = true end
-      elseif code == 208 then -- Down
+      elseif code == 208 then
         if sel < #matches and sel < max_show then sel = sel + 1; dirty = true end
       elseif char > 31 then
         input = input .. unicode.char(char)
@@ -281,7 +281,7 @@ local function pickPlanet(x, y, prompt)
   end
 end
 
--- ─── SCAN VIEW ──────────────────────────────────────────────────────────────
+
 
 local function buildTaken()
   local ta = {}
@@ -296,7 +296,7 @@ end
 local function viewScan()
   local rx = LEFT_W + 3
   clearRight()
-  rightHeader("--- SCANNING NETWORK ---")
+  rightHeader("--- SCANNING NETWORK
   gset(rx, 8, "Scanning...", C.dim, C.bg)
 
   local adapters = mch.scanNetwork()
@@ -311,7 +311,7 @@ local function viewScan()
   end
 
   clearRight()
-  rightHeader("--- SCAN RESULTS ---")
+  rightHeader("--- SCAN RESULTS
 
   if #free_a == 0 then
     gset(rx, 8, "No unregistered GT machines found.", C.warn, C.bg)
@@ -327,7 +327,7 @@ local function viewScan()
 
   for i, gm in ipairs(free_a) do
     clearRight()
-    rightHeader("--- MACHINE " .. i .. "/" .. #free_a .. " ---")
+    rightHeader("--- MACHINE " .. i .. "/" .. #free_a .. "
     gset(rx, 8,  "Type:    " .. pad(gm.name, 40), C.text, C.bg)
     gset(rx, 9,  "Address: " .. string.sub(gm.addr, 1, 20) .. "...", C.dim, C.bg)
     gset(rx, 11, "(y) Register   (n) Skip   (i) Ignore   (l) Set as LSC", C.dim, C.bg)
@@ -352,15 +352,15 @@ local function viewScan()
       gset(rx, 14, "[OK] Set as LSC.", C.ok, C.bg)
       os.sleep(1.5)
     elseif la == "n" then
-      -- пропустить
+
     else
-      -- Esc или что-то другое — выходим
+
       return
     end
   end
 end
 
--- ─── DATABASE VIEW ──────────────────────────────────────────────────────────
+
 
 local function viewDatabase()
   local rx     = LEFT_W + 3
@@ -372,7 +372,7 @@ local function viewDatabase()
   while in_db do
     local planets = registry.getPlanetList()
     clearRight()
-    rightHeader("--- DATABASE ---")
+    rightHeader("--- DATABASE
 
     if #planets == 0 then
       gset(rx, 8, "Registry is empty.", C.dim, C.bg)
@@ -421,7 +421,7 @@ local function viewDatabase()
       elseif code == 211 then
         local p = planets[sel_p]
         clearRight()
-        rightHeader("--- DELETE PLANET? ---")
+        rightHeader("--- DELETE PLANET?
         gset(rx, 8, "Delete planet: " .. p.name .. "?", C.warn, C.bg)
         local ans = readInput(rx, 10, "Confirm (y/n): ", "")
         if ans:lower() == "y" then
@@ -435,7 +435,7 @@ local function viewDatabase()
         local in_machines = true
         while in_machines do
           clearRight()
-          rightHeader("--- " .. p.name:upper() .. " ---")
+          rightHeader("--- " .. p.name:upper() .. "
           local mlist = p.machines or {}
           
           for j = 0, list_h - 1 do
@@ -492,7 +492,7 @@ local function viewDatabase()
   end
 end
 
--- ─── ГЛАВНОЕ МЕНЮ ───────────────────────────────────────────────────────────
+
 
 local MENU_ITEMS = {
   { label = "Scan New Machines", fn = viewScan     },
@@ -515,11 +515,11 @@ local function run()
       local code = ev[4]
       if code == 200 and sel > 1 then sel = sel - 1
       elseif code == 208 and sel < #MENU_ITEMS then sel = sel + 1
-      elseif code == 1 then break  -- Esc
+      elseif code == 1 then break
       elseif code == 28 or code == 205 then
         local res = MENU_ITEMS[sel].fn()
         if res == "exit" then break end
-        -- Перерисовка после возврата
+
         drawFrame()
         drawMenu(MENU_ITEMS, sel)
         drawFooter({{"Up/Dn", "Move"}, {"Enter", "Select"}, {"Esc", "Exit"}})

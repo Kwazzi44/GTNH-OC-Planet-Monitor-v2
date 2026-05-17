@@ -1,39 +1,39 @@
--- =============================================================================
--- hub/registry.lua — Planet & Machine Registry (persistent)
--- =============================================================================
--- Структура данных:
--- _data["Ceres"] = {
---   name     = "Ceres",
---   status   = "OK",          -- OK | PARTIAL | RING_DOWN | UNKNOWN
---   last_ok  = <os.time()>,
---   meta     = {},            -- для расширения
---   machines = {
---     {
---       name         = "EBF",
---       adapter_addr = "94c19a39-...",
---       redstone     = {
---         addr  = "3f3ae22d-...",
---         side  = 2,
---         color = nil,
---         mode  = "pulse",
---         pulse = 0.5,
---       }, -- или nil если нет редстоуна
---       meta         = {},    -- для расширения
---       -- runtime поля (не сохраняются):
---       active       = false,
---       error        = nil,
---     }
---   }
--- }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 local serial     = require("serialization")
 local filesystem = require("filesystem")
 local config     = require("config")
 
 local registry = {}
-local _data = {}   -- keyed by planet name
+local _data = {}
 
--- ─── Сохранение / загрузка ───────────────────────────────────────────────
+
 
 local SAVE_KEYS = { "name", "machines", "meta" }
 local MACHINE_SAVE = {
@@ -76,14 +76,14 @@ function registry.load()
   local ok, result = pcall(serial.unserialize, raw)
   if ok and type(result) == "table" then
     _data = result
-    -- Инициализируем runtime-поля и мигрируем старую базу (Schema Migration)
+
     for pname, p in pairs(_data) do
       if pname ~= "__ignored__" and pname ~= "__system__" then
         p.status  = "UNKNOWN"
         p.last_ok = 0
         p.meta    = p.meta or {}
         for _, m in ipairs(p.machines or {}) do
-          -- Миграция старых flat-полей (rs_*) в блок redstone={}
+
           if m.rs_addr and not m.redstone then
             m.redstone = {
               addr  = m.rs_addr,
@@ -92,7 +92,7 @@ function registry.load()
               mode  = m.rs_mode,
               pulse = m.rs_pulse
             }
-            -- Удаляем старые поля
+
             m.rs_addr = nil; m.rs_side = nil; m.rs_color = nil; m.rs_mode = nil; m.rs_pulse = nil
           end
           m.meta   = m.meta or {}
@@ -104,7 +104,7 @@ function registry.load()
   end
 end
 
--- ─── CRUD ────────────────────────────────────────────────────────────────
+
 
 function registry.getAll()  return _data end
 
@@ -128,7 +128,7 @@ end
 function registry.addMachine(planet_name, machine)
   local p = _data[planet_name]
   if not p then return false end
-  -- Не добавлять дубликаты по adapter_addr
+
   for _, m in ipairs(p.machines) do
     if m.adapter_addr == machine.adapter_addr then return false end
   end
@@ -152,7 +152,7 @@ function registry.removeMachine(planet_name, adapter_addr)
   end
 end
 
---- Отсортированный список планет для GUI
+
 function registry.getPlanetList()
   local list = {}
   for pname, p in pairs(_data) do 
@@ -162,7 +162,7 @@ function registry.getPlanetList()
   return list
 end
 
---- Все адреса адаптеров из всех планет (для быстрой проверки)
+
 function registry.getAllAdapterAddrs()
   local addrs = {}
   for pname, p in pairs(_data) do

@@ -1,6 +1,6 @@
--- =============================================================================
--- hub/logger.lua
--- =============================================================================
+
+
+
 local config = require("config")
 
 local logger = {}
@@ -28,14 +28,14 @@ local function flush()
   end
   
   if trimmed then
-    -- Перезаписываем файл целиком, чтобы он не рос бесконечно
+
     local f = io.open(config.log_file, "w")
     if f then 
       for _, l in ipairs(_lines) do f:write(l .. "\n") end
       f:close() 
     end
   else
-    -- Просто дописываем в конец
+
     local f = io.open(config.log_file, "a")
     if f then 
       for _, l in ipairs(_buffer) do f:write(l .. "\n") end
@@ -80,7 +80,7 @@ function logger.load()
   for line in f:lines() do 
     table.insert(_lines, line)
     count = count + 1
-    if count % 1000 == 0 then require("os").sleep(0) end -- предотвращаем тайм-аут на больших логах
+    if count % 1000 == 0 then require("os").sleep(0) end
   end
   f:close()
   

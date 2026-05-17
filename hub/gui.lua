@@ -1,6 +1,6 @@
--- =============================================================================
--- hub/gui.lua — Premium Solarized UI
--- =============================================================================
+
+
+
 
 local component = require("component")
 local computer  = require("computer")
@@ -29,7 +29,7 @@ local STATUS_LABEL = {
   UNKNOWN     = "[????]"
 }
 
--- ─── Internal Helpers ──────────────────────────────────────────────────────
+
 
 local function g_set(x, y, text, fg, bg) theme.gset(x, y, text, fg, bg) end
 local function g_fill(x, y, w, h, char, fg, bg) theme.gfill(x, y, w, h, char, fg, bg) end
@@ -63,7 +63,7 @@ local function timeAgo(t)
   return math.floor(sec/60) .. "m"
 end
 
--- Helpers removed, now in theme.lua
+
 
 
 function gui.init()
