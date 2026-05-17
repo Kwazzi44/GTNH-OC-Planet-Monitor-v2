@@ -372,6 +372,7 @@ runSetup = function()
   end
 
   ui.dirty = true
+  ui.full_redraw = true
 end
 
 runUpdate = function()
