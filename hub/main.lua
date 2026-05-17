@@ -15,6 +15,7 @@ local mch      = require("machines")
 local logger   = require("logger")
 local gui      = require("gui")
 local stats    = require("stats")
+local theme    = require("theme")
 
 -- ─── UI State ─────────────────────────────────────────────────────────────
 
@@ -238,17 +239,18 @@ local function onKey(_, _, char, code)
   local HOME = (code == 199)
   local ENDK = (code == 207)
 
+  local _, H = theme.getRes()
   if ui.view == VIEW.PLANETS and (UP or DOWN) then
     local planets = registry.getPlanetList()
     ui.planet_sel, ui.planet_scroll =
-      navigate(ui.planet_sel, ui.planet_scroll, UP and -1 or 1, #planets, LIST_H)
+      navigate(ui.planet_sel, ui.planet_scroll, UP and -1 or 1, #planets, H - 11)
     ui.dirty = true
 
   elseif ui.view == VIEW.DETAIL and (UP or DOWN) then
     local p = registry.get(ui.detail_planet)
     local cnt = p and #(p.machines or {}) or 0
     ui.machine_sel, ui.machine_scroll =
-      navigate(ui.machine_sel, ui.machine_scroll, UP and -1 or 1, cnt, LIST_H)
+      navigate(ui.machine_sel, ui.machine_scroll, UP and -1 or 1, cnt, H - 8)
     ui.dirty = true
 
   elseif ui.view == VIEW.LOG then
@@ -270,25 +272,27 @@ local function onTouch(_, _, x, y, button, playerName)
   end
   if button ~= 0 then return end -- Only left click
   
-  -- Footer click (y == H)
-  if y == H then
+  local W, H = theme.getRes()
+  -- Footer click (y == H - 1)
+  if y == H - 1 then
     if ui.view == VIEW.PLANETS then
-      if x >= 19 and x <= 34 then onKey(nil, nil, nil, 28) -- Enter (Details)
-      elseif x >= 35 and x <= 49 then onKey(nil, nil, string.byte("a"), nil) -- A (RestartAll)
-      elseif x >= 50 and x <= 61 then onKey(nil, nil, string.byte("r"), nil) -- R (Refresh)
-      elseif x >= 62 and x <= 69 then onKey(nil, nil, string.byte("l"), nil) -- L (Log)
-      elseif x >= 70 then onKey(nil, nil, string.byte("s"), nil) -- S (Setup)
+      if x >= 3 and x < 22 then onKey(nil, nil, nil, 28) -- Enter (Details)
+      elseif x >= 22 and x < 37 then onKey(nil, nil, nil, 30) -- A (Restart)
+      elseif x >= 37 and x < 53 then onKey(nil, nil, nil, 61) -- F3 (Refresh)
+      elseif x >= 53 and x < 65 then onKey(nil, nil, nil, 62) -- F4 (Log)
+      elseif x >= 65 and x < 80 then onKey(nil, nil, nil, 63) -- F5 (Update)
+      elseif x >= 80 then onKey(nil, nil, nil, 59) -- F1 (Setup)
       end
     elseif ui.view == VIEW.DETAIL then
-      if x >= 11 and x <= 26 then onKey(nil, nil, nil, 28) -- Enter (Restart)
-      elseif x >= 27 and x <= 37 then onKey(nil, nil, string.byte("t"), nil) -- T (Toggle)
-      elseif x >= 38 and x <= 53 then onKey(nil, nil, string.byte("a"), nil) -- A (RestartAll)
-      elseif x >= 2 and x <= 10 then onKey(nil, nil, string.byte("b"), nil) -- B (Back)
+      if x >= 3 and x < 15 then onKey(nil, nil, string.byte("b"), nil) -- B (Back)
+      elseif x >= 15 and x < 34 then onKey(nil, nil, nil, 28) -- Enter (Restart)
+      elseif x >= 34 and x < 48 then onKey(nil, nil, string.byte("t"), nil) -- T (Toggle)
+      elseif x >= 48 then onKey(nil, nil, nil, 30) -- A (Restart All)
       end
     elseif ui.view == VIEW.LOG then
-      if x >= 15 and x <= 22 then onKey(nil, nil, nil, 199) -- Home
-      elseif x >= 23 and x <= 33 then onKey(nil, nil, nil, 207) -- End
-      elseif x >= 34 then onKey(nil, nil, string.byte("b"), nil) -- B (Back)
+      if x >= 3 and x < 17 then onKey(nil, nil, nil, 199) -- Home
+      elseif x >= 17 and x < 33 then onKey(nil, nil, nil, 207) -- End
+      elseif x >= 33 then onKey(nil, nil, string.byte("b"), nil) -- B (Back)
       end
     end
     return
@@ -525,8 +529,13 @@ local function mainLoop()
       end
 
       -- Перерисовка
-      if ui.dirty or (now - ui.last_draw) >= config.gui_refresh then
+      if ui.dirty then
         draw()
+      elseif (now - ui.last_draw) >= config.gui_refresh then
+        if ui.view == VIEW.PLANETS then
+          gui.drawStats(stats)
+        end
+        ui.last_draw = now
       end
     end)
     

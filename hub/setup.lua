@@ -16,19 +16,8 @@ local W, H = gpu.getResolution()
 
 -- ─── Цвета — идентичны gui.lua ──────────────────────────────────────────────
 
-local C = {
-  bg      = 0x002B36,
-  sel_bg  = 0x073642,
-  sel_fg  = 0x268BD2,
-  text    = 0x839496,
-  dim     = 0x586E75,
-  border  = 0x1D6680,
-  title   = 0x268BD2,
-  key     = 0xB58900,
-  ok      = 0x859900,
-  warn    = 0xDC322F,
-  good    = 0x859900,
-}
+local theme = require("theme")
+local C = theme.C
 
 local config = {}
 local config_path = "/home/hub/config.lua"
@@ -65,23 +54,9 @@ end
 
 -- ─── Примитивы рисования ────────────────────────────────────────────────────
 
-local function gset(x, y, text, fg, bg)
-  if fg then gpu.setForeground(fg) end
-  if bg then gpu.setBackground(bg) end
-  gpu.set(x, y, text)
-end
-
-local function gfill(x, y, w, h, ch, fg, bg)
-  if fg then gpu.setForeground(fg) end
-  if bg then gpu.setBackground(bg) end
-  gpu.fill(x, y, w, h, ch)
-end
-
-local function pad(s, n)
-  s = tostring(s)
-  if #s > n then return s:sub(1, n-1) .. "~" end
-  return s .. string.rep(" ", n - #s)
-end
+local function gset(x, y, text, fg, bg) theme.gset(x, y, text, fg, bg) end
+local function gfill(x, y, w, h, ch, fg, bg) theme.gfill(x, y, w, h, ch, fg, bg) end
+local function pad(s, n) return theme.pad(s, n) end
 
 -- ─── Общий каркас экрана ────────────────────────────────────────────────────
 
@@ -169,9 +144,13 @@ local function readInput(x, y, prompt, default)
   gset(x, y, prompt, C.dim, C.bg)
   local px = x + #prompt
   local input = default or ""
+  local dirty = true
   while true do
-    gfill(px, y, W-px-1, 1, " ", C.text, C.bg)
-    gset(px, y, input .. "_", C.title, C.bg)
+    if dirty then
+      gfill(px, y, W-px-1, 1, " ", C.text, C.bg)
+      gset(px, y, input .. "_", C.title, C.bg)
+      dirty = false
+    end
     local ev = table.pack(event.pull())
     if ev[1] == "key_down" then
       local char, code = ev[3], ev[4]
@@ -181,11 +160,14 @@ local function readInput(x, y, prompt, default)
         return input
       elseif code == 14 and unicode.len(input) > 0 then
         input = unicode.sub(input, 1, -2)
+        dirty = true
       elseif char > 31 then
         input = input .. unicode.char(char)
+        dirty = true
       end
     elseif ev[1] == "clipboard" and ev[3] then
       input = input .. ev[3]
+      dirty = true
     end
   end
 end
@@ -214,6 +196,7 @@ local function pickPlanet(x, y, prompt)
   local input = ""
   local sel = 1
   local max_show = 5
+  local dirty = true
   
   while true do
     local matches = {}
@@ -238,24 +221,27 @@ local function pickPlanet(x, y, prompt)
     if sel > #matches then sel = math.max(1, #matches) end
     if #matches == 0 then sel = 1 end
     
-    -- Отрисовка ввода
-    gfill(px, y, W-px-1, 1, " ", C.text, C.bg)
-    gset(px, y, input .. "_", C.title, C.bg)
-    
-    -- Отрисовка подсказок
-    for i = 1, max_show do
-      local my = y + 1 + i
-      gfill(x, my, W-x-1, 1, " ", C.text, C.bg)
-      if i <= #matches then
-        local name = matches[i]
-        local label = "  " .. name
-        if i == sel then
-          label = "> " .. name
-          gset(x, my, label, C.sel_fg, C.sel_bg)
-        else
-          gset(x, my, label, C.text, C.bg)
+    if dirty then
+      -- Отрисовка ввода
+      gfill(px, y, W-px-1, 1, " ", C.text, C.bg)
+      gset(px, y, input .. "_", C.title, C.bg)
+      
+      -- Отрисовка подсказок
+      for i = 1, max_show do
+        local my = y + 1 + i
+        gfill(x, my, W-x-1, 1, " ", C.text, C.bg)
+        if i <= #matches then
+          local name = matches[i]
+          local label = "  " .. name
+          if i == sel then
+            label = "> " .. name
+            gset(x, my, label, C.sel_fg, C.sel_bg)
+          else
+            gset(x, my, label, C.text, C.bg)
+          end
         end
       end
+      dirty = false
     end
     
     local ev = table.pack(event.pull())
@@ -277,17 +263,20 @@ local function pickPlanet(x, y, prompt)
       elseif code == 14 and unicode.len(input) > 0 then -- Backspace
         input = unicode.sub(input, 1, -2)
         sel = 1
+        dirty = true
       elseif code == 200 then -- Up
-        if sel > 1 then sel = sel - 1 end
+        if sel > 1 then sel = sel - 1; dirty = true end
       elseif code == 208 then -- Down
-        if sel < #matches and sel < max_show then sel = sel + 1 end
+        if sel < #matches and sel < max_show then sel = sel + 1; dirty = true end
       elseif char > 31 then
         input = input .. unicode.char(char)
         sel = 1
+        dirty = true
       end
     elseif ev[1] == "clipboard" and ev[3] then
       input = input .. ev[3]
       sel = 1
+      dirty = true
     end
   end
 end
@@ -377,6 +366,8 @@ local function viewDatabase()
   local rx     = LEFT_W + 3
   local sel_p  = 1
   local in_db  = true
+  local scroll_p = 1
+  local list_h = H - 12
 
   while in_db do
     local planets = registry.getPlanetList()
@@ -393,16 +384,21 @@ local function viewDatabase()
       end
     end
 
-    for i, p in ipairs(planets) do
-      local y = 7 + i
-      if y > H-5 then break end
-      local label = pad(string.format("%02d  %s  (%d machines)", i, p.name, #(p.machines or {})), W-LEFT_W-4)
-      if i == sel_p then
-        gfill(rx, y, W-LEFT_W-3, 1, " ", C.sel_fg, C.sel_bg)
-        gset(rx, y, label, C.sel_fg, C.sel_bg)
+    for i = 0, list_h - 1 do
+      local idx = scroll_p + i
+      local y = 8 + i
+      if idx <= #planets then
+        local p = planets[idx]
+        local label = pad(string.format("%02d  %s  (%d machines)", idx, p.name, #(p.machines or {})), W-LEFT_W-4)
+        if idx == sel_p then
+          gfill(rx, y, W-LEFT_W-3, 1, " ", C.sel_fg, C.sel_bg)
+          gset(rx, y, label, C.sel_fg, C.sel_bg)
+        else
+          gfill(rx, y, W-LEFT_W-3, 1, " ", C.text, C.bg)
+          gset(rx, y, label, C.text, C.bg)
+        end
       else
         gfill(rx, y, W-LEFT_W-3, 1, " ", C.text, C.bg)
-        gset(rx, y, label, C.text, C.bg)
       end
     end
 
@@ -411,8 +407,16 @@ local function viewDatabase()
     local ev = table.pack(event.pull())
     if ev[1] == "key_down" then
       local code = ev[4]
-      if code == 200 and sel_p > 1 then sel_p = sel_p - 1
-      elseif code == 208 and sel_p < #planets then sel_p = sel_p + 1
+      if code == 200 then
+        if sel_p > 1 then
+          sel_p = sel_p - 1
+          if sel_p < scroll_p then scroll_p = sel_p end
+        end
+      elseif code == 208 then
+        if sel_p < #planets then
+          sel_p = sel_p + 1
+          if sel_p >= scroll_p + list_h then scroll_p = sel_p - list_h + 1 end
+        end
       elseif code == 14 or code == 1 or code == 48 then in_db = false
       elseif code == 211 then
         local p = planets[sel_p]
@@ -425,40 +429,55 @@ local function viewDatabase()
           if sel_p > #registry.getPlanetList() then sel_p = math.max(1, #registry.getPlanetList()) end
         end
       elseif code == 28 then
-        -- Просмотр машин планеты
         local p  = planets[sel_p]
         local sm = 1
+        local scroll_m = 1
         local in_machines = true
         while in_machines do
           clearRight()
           rightHeader("--- " .. p.name:upper() .. " ---")
           local mlist = p.machines or {}
-          for j, m in ipairs(mlist) do
-            local y = 7 + j
-            if y > H-5 then break end
-            local ml = pad(string.format("%02d  %s  [%s]", j, m.name, m.adapter_addr:sub(1,8)), W-LEFT_W-4)
-            if j == sm then
-              gfill(rx, y, W-LEFT_W-3, 1, " ", C.sel_fg, C.sel_bg)
-              gset(rx, y, ml, C.sel_fg, C.sel_bg)
+          
+          for j = 0, list_h - 1 do
+            local idx = scroll_m + j
+            local y = 8 + j
+            if idx <= #mlist then
+              local m = mlist[idx]
+              local ml = pad(string.format("%02d  %s  [%s]", idx, m.name, m.adapter_addr:sub(1,8)), W-LEFT_W-4)
+              if idx == sm then
+                gfill(rx, y, W-LEFT_W-3, 1, " ", C.sel_fg, C.sel_bg)
+                gset(rx, y, ml, C.sel_fg, C.sel_bg)
+              else
+                gfill(rx, y, W-LEFT_W-3, 1, " ", C.text, C.bg)
+                gset(rx, y, ml, C.text, C.bg)
+              end
             else
               gfill(rx, y, W-LEFT_W-3, 1, " ", C.text, C.bg)
-              gset(rx, y, ml, C.text, C.bg)
             end
           end
+          
           if #mlist == 0 then gset(rx, 8, "No machines.", C.dim, C.bg) end
           drawFooter({{"Up/Dn", "Move"}, {"R", "Rename"}, {"Del", "Delete"}, {"B", "Back"}})
 
           local mev = table.pack(event.pull())
           if mev[1] == "key_down" then
             local mc = mev[4]
-            if mc == 200 and sm > 1 then sm = sm - 1
-            elseif mc == 208 and sm < #mlist then sm = sm + 1
+            if mc == 200 then
+              if sm > 1 then
+                sm = sm - 1
+                if sm < scroll_m then scroll_m = sm end
+              end
+            elseif mc == 208 then
+              if sm < #mlist then
+                sm = sm + 1
+                if sm >= scroll_m + list_h then scroll_m = sm - list_h + 1 end
+              end
             elseif mc == 1 or mc == 14 or mc == 48 then in_machines = false
-            elseif mc == 19 and mlist[sm] then  -- R = rename
+            elseif mc == 19 and mlist[sm] then
               local m = mlist[sm]
               local nn = readInput(rx, H-4, "New name: ", m.name)
               if nn ~= "" then m.name = nn; registry.save() end
-            elseif mc == 211 and mlist[sm] then  -- Del
+            elseif mc == 211 and mlist[sm] then
               local m = mlist[sm]
               local ans = readInput(rx, H-4, "Delete " .. m.name .. "? (y/n): ", "")
               if ans:lower() == "y" then

@@ -5,6 +5,8 @@ local config = require("config")
 
 local logger = {}
 local _lines = {}
+local _buffer = {}
+local _timer_id = nil
 
 local function ts()
   local t = math.floor(os.time())
@@ -15,8 +17,9 @@ local function ts()
   return string.format("[D%04d %02d:%02d:%02d]", d, h, m, s)
 end
 
-local function writeLine(line)
-  table.insert(_lines, line)
+local function flush()
+  if #_buffer == 0 then return end
+  
   local max = config.log_max_lines or 100
   local trimmed = false
   while #_lines > max do 
@@ -34,7 +37,26 @@ local function writeLine(line)
   else
     -- Просто дописываем в конец
     local f = io.open(config.log_file, "a")
-    if f then f:write(line .. "\n"); f:close() end
+    if f then 
+      for _, l in ipairs(_buffer) do f:write(l .. "\n") end
+      f:close() 
+    end
+  end
+  _buffer = {}
+end
+
+local function writeLine(line)
+  table.insert(_lines, line)
+  table.insert(_buffer, line)
+  
+  if #_buffer >= 10 then
+    flush()
+  elseif not _timer_id then
+    local event = require("event")
+    _timer_id = event.timer(3, function()
+      flush()
+      _timer_id = nil
+    end)
   end
 end
 

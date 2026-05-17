@@ -88,10 +88,7 @@ function machines.scanNetwork()
           
           if (name == "Unknown" or is_controller) and s_data[1] then
             local clean = s_data[1]:gsub("§.", "")
-            -- Если строка не содержит двоеточия (как в "Progress: 0" или "Operational Data:"),
-            -- то это красивое имя из сенсора, и оно лучше, чем сырое имя вроде multimachine.oildrillinfinite
-            -- Но мы применяем это только для контроллеров или если имя Unknown, 
-            -- чтобы не переименовать шины в "The bus is online"
+            clean = clean:match("^%s*(.-)%s*$") -- Trim spaces
             if clean and clean ~= "" and not clean:match(":") then
               name = clean
             end
@@ -249,7 +246,9 @@ function machines.restart(m)
   local sides_str = all_sides and "ALL" or tostring(r.side)
 
   if mode == "pulse" then
-    high(); os.sleep(pulse); low()
+    high()
+    local event = require("event")
+    event.timer(pulse, function() low() end)
     return true, string.format("Pulse sent (sides=%s, %.1fs)", sides_str, pulse)
 
   elseif mode == "enable" then
@@ -257,7 +256,12 @@ function machines.restart(m)
     return true, string.format("RS HIGH set (sides=%s)", sides_str)
 
   elseif mode == "toggle" then
-    low(); os.sleep(0.1); high(); os.sleep(pulse); low()
+    low()
+    local event = require("event")
+    event.timer(0.1, function()
+      high()
+      event.timer(pulse, function() low() end)
+    end)
     return true, string.format("Toggle sent (sides=%s)", sides_str)
 
   else
@@ -331,15 +335,7 @@ function machines.toggle(m)
   local color     = r.color
 
   local ok, err = pcall(function()
-    local current_val = 0
-    local first_side = sides[1]
-    if color then
-      local out = rs.getBundledOutput(first_side)
-      current_val = out[color] or 0
-    else
-      current_val = rs.getOutput(first_side) or 0
-    end
-    local is_on = (current_val > 0)
+    local is_on = m.active
     if is_on then
       for _, s in ipairs(sides) do rsLow(rs, s, color) end
     else
