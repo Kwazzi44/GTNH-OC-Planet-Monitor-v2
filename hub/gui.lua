@@ -19,7 +19,7 @@ local C = {
   sel_fg    = 0x268BD2, -- Blue
   text      = 0x839496, -- Base0
   dim       = 0x586E75, -- Base01
-  border    = 0x073642, -- Base02
+  border    = 0x2AA198, -- Cyan (видимый цвет рамки!)
   title     = 0x268BD2, -- Blue (Bright)
   key       = 0xB58900, -- Yellow
   key_bg    = 0x002B36,
@@ -350,21 +350,26 @@ function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
 end
 
 function gui.drawLog(lines, scroll)
-  g_fill(1, 4, W, H-4, " ", C.text, C.bg)
+  -- Без g_fill чтобы не мигало — перезаписываем строки
   drawHeader("DIAGNOSTIC LOG", "RECORDS")
   local LIST_Y = 4
-  local LIST_H = H - LIST_Y - 1
+  local LIST_H = H - LIST_Y - 3  -- -3 под footer (separator + keys + bottom)
   local count = #lines
   scroll = scroll or math.max(1, count - LIST_H + 1)
 
   for i = 0, LIST_H - 1 do
     local idx = scroll + i
     local ry = LIST_Y + i
+    -- Боковые рамки
+    g_set(1, ry, "|", C.border, C.bg)
+    g_set(W, ry, "|", C.border, C.bg)
     if idx <= count then
       g_set(2, ry, pad(lines[idx] or "", W - 3), C.text, C.bg)
+    else
+      g_fill(2, ry, W - 2, 1, " ", C.text, C.bg)
     end
   end
-  drawFooter({{"B", "Back"}})
+  drawFooter({{"Home", "Top"}, {"End", "Bottom"}, {"B", "Back"}})
 end
 
 function gui.notify(msg, color)
