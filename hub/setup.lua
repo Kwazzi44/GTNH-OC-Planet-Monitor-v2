@@ -193,19 +193,19 @@ end
 -- ─── База данных планет GTNH ────────────────────────────────────────────────
 
 local PLANET_LIST = {
-  "Overworld (Tier 0)", "Moon (Tier 1)", "Mars (Tier 2)", "Phobos (Tier 2)", "Deimos (Tier 2)",
-  "Asteroids (Tier 3)", "Ceres (Tier 3)", "Europa (Tier 3)", "Ganymede (Tier 3)", "Callisto (Tier 3)", "Ross 128 B (Tier 3)",
-  "Venus (Tier 4)", "Mercury (Tier 4)", "Io (Tier 4)",
-  "Jupiter (Tier 3)", "Saturn (Tier 5)", "Titan (Tier 5)", "Enceladus (Tier 5)", 
-  "Uranus (Tier 5)", "Miranda (Tier 5)", "Oberon (Tier 5)", "Ross128ba (Tier 5)",
-  "Neptune (Tier 6)", "Triton (Tier 6)", "Proteus (Tier 6)",
-  "Pluto (Tier 7)", "Kuiper Belt (Tier 7)", "Haumea (Tier 7)", "Makemake (Tier 7)", "Eris (Tier 7)",
-  "Proxima B (Tier 8)", "Barnarda C (Tier 8)", "Barnarda E (Tier 8)", "Barnarda F (Tier 8)",
-  "Ross 128 C (Tier 8)", "Tau Ceti F (Tier 8)", "Tau Ceti B (Tier 8)", "Tau Ceti C (Tier 8)", "Tau Ceti D (Tier 8)", "Tau Ceti E (Tier 8)", "Tau Ceti G (Tier 8)",
-  "Kepler 22b (Tier 8)", "Kepler 47c (Tier 8)", "Kepler 62e (Tier 8)", "Kepler 62f (Tier 8)",
-  "Sirius B (Tier 8)", "Sirius C (Tier 8)", "Centauri A (Tier 8)", "Vega B (Tier 8)", "Arcturus (Tier 8)",
-  "Antares (Tier 8)", "Betelgeuse (Tier 8)", "Rigel (Tier 8)", "Aldebaran (Tier 8)", "Polaris (Tier 8)", 
-  "Neper (Tier 9)"
+  "[T0] Overworld", "[T1] Moon", "[T2] Mars", "[T2] Phobos", "[T2] Deimos",
+  "[T3] Asteroids", "[T3] Ceres", "[T3] Europa", "[T3] Ganymede", "[T3] Callisto", "[T3] Ross 128 B",
+  "[T4] Venus", "[T4] Mercury", "[T4] Io",
+  "[T3] Jupiter", "[T5] Saturn", "[T5] Titan", "[T5] Enceladus", 
+  "[T5] Uranus", "[T5] Miranda", "[T5] Oberon", "[T5] Ross128ba",
+  "[T6] Neptune", "[T6] Triton", "[T6] Proteus",
+  "[T7] Pluto", "[T7] Kuiper Belt", "[T7] Haumea", "[T7] Makemake", "[T7] Eris",
+  "[T8] Proxima B", "[T8] Barnarda C", "[T8] Barnarda E", "[T8] Barnarda F",
+  "[T8] Ross 128 C", "[T8] Tau Ceti F", "[T8] Tau Ceti B", "[T8] Tau Ceti C", "[T8] Tau Ceti D", "[T8] Tau Ceti E", "[T8] Tau Ceti G",
+  "[T8] Kepler 22b", "[T8] Kepler 47c", "[T8] Kepler 62e", "[T8] Kepler 62f",
+  "[T8] Sirius B", "[T8] Sirius C", "[T8] Centauri A", "[T8] Vega B", "[T8] Arcturus",
+  "[T8] Antares", "[T8] Betelgeuse", "[T8] Rigel", "[T8] Aldebaran", "[T8] Polaris", 
+  "[T9] Neper"
 }
 
 local function pickPlanet(x, y, prompt)
