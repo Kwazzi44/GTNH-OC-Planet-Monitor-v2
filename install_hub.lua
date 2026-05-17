@@ -5,7 +5,7 @@
 
 
 
-local REPO = "https://raw.githubusercontent.com/Kwazzi44/GTNH-OC-Planet-Monitor/main"
+local REPO = "https://raw.githubusercontent.com/Kwazzi44/GTNH-OC-Planet-Monitor-v2/main"
 
 local component  = require("component")
 local filesystem = require("filesystem")
@@ -27,7 +27,7 @@ local FILES = {
   { "/hub/main.lua",        "/home/hub/main.lua"      },
   { "/update_hub.lua",      "/home/update_hub.lua"    },
   { "/uninstall_hub.lua",   "/home/uninstall_hub.lua" },
-  { "/cleanup_old.lua",     "/home/cleanup_old.lua"   },
+  { "/autorun.lua",         "/home/autorun.lua"       },
 }
 
 local function mkdirs(dest)
@@ -69,16 +69,7 @@ io.write(string.format("\nDone: %d OK, %d FAILED\n", ok_n, fail_n))
 
 if fail_n == 0 then
 
-  io.write("\nCreate /home/autorun.lua to auto-start on boot? [y/n]: ")
-  local a = io.read()
-  if a and a:lower() == "y" then
-    local f = io.open("/home/autorun.lua", "w")
-    if f then
-      f:write('shell.execute("/home/hub/main.lua")\n')
-      f:close()
-      io.write("[OK] /home/autorun.lua created.\n")
-    end
-  end
+  -- autorun.lua is now downloaded automatically
   io.write("\nInstallation complete!\n")
   io.write("Step 1:  lua /home/hub/setup.lua   (first time only)\n")
   io.write("Step 2:  lua /home/hub/main.lua\n\n")
