@@ -37,7 +37,7 @@
 ## Установка
 Для первой установки выполните в терминале OpenComputers:
 ```bash
-wget -q https://raw.githubusercontent.com/Kwazzi44/GTNH-OC-Planet-Monitor/main/install_hub.lua /tmp/ih.lua
+wget -q https://raw.githubusercontent.com/Kwazzi44/GTNH-OC-Planet-Monitor-v2/main/install_hub.lua /tmp/ih.lua
 lua /tmp/ih.lua
 ```
 Скрипт скачает все файлы в `/home/hub/` и предложит создать автозапуск.
