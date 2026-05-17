@@ -374,11 +374,11 @@ function gui.drawLog(lines, scroll)
 end
 
 function gui.notify(msg, color)
-  local len = #msg + 4
-  local x = math.floor((W - len) / 2)
-  local y = math.floor(H / 2)
+  local len = math.min(#msg + 4, W - 2)
+  local x   = math.max(1, math.floor((W - len) / 2))
+  local y    = math.floor(H / 2)
   g_fill(x, y-1, len, 3, " ", color, C.header_bg)
-  g_set(x + 2, y, msg, 0xFFFFFF, C.header_bg)
+  g_set(x + 2, y, msg:sub(1, len - 4), 0xFFFFFF, C.header_bg)
 end
 
 return gui

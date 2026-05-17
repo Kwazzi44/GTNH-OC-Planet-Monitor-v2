@@ -313,12 +313,16 @@ function machines.toggle(m)
   -- Попытка 4: Redstone Hardware
   local r = m.redstone
   if not r or not r.addr or r.side == nil then
-    -- Дебаг: перечисляем что есть в proxy
-    local methods = {}
-    for k, v in pairs(proxy) do
-      if type(v) == "function" then table.insert(methods, k) end
+    -- Дебаг: получить реальный список методов через component.methods()
+    local methods_t = {}
+    local ok_m, cm = pcall(component.methods, m.adapter_addr)
+    if ok_m and type(cm) == "table" then
+      for name, _ in pairs(cm) do
+        table.insert(methods_t, name)
+      end
+      table.sort(methods_t)
     end
-    return false, "No API (tried: setWorkAllowed,setActive,enable/disable). Methods: " .. table.concat(methods, ",")
+    return false, "No control API. Methods: " .. table.concat(methods_t, ", ")
   end
   local rs = rsProxy(r.addr)
   if not rs then return false, "Redstone component not found" end

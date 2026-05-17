@@ -147,9 +147,11 @@ local function doToggleMachine()
   local m = (p.machines or {})[ui.machine_sel]
   if not m then return end
   local ok, msg = mch.toggle(m)
+  -- Полный момент идёт в лог (F4 → Log)
   logger.log(p.name, m.name, "TOGGLE -> " .. (ok and "OK: " or "FAIL: ") .. msg)
-  setNotify((ok and "[OK] " or "[FAIL] ") .. msg, ok and 0x00DD55 or 0xFF2244)
-  -- Немедленное обновление статуса для этой машины
+  -- В уведомлении — короткая версия (макс 40 симв)
+  local short = msg:len() > 40 and (msg:sub(1, 38) .. "...") or msg
+  setNotify((ok and "[OK] " or "[ERR] ") .. short, ok and 0x00DD55 or 0xFF2244)
   if ok then
     local active, err = mch.getStatus(m)
     m.active = active
