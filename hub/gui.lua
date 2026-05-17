@@ -19,11 +19,11 @@ local C = {
   sel_fg    = 0x268BD2, -- Blue
   text      = 0x839496, -- Base0
   dim       = 0x586E75, -- Base01
-  border    = 0x2AA198, -- Cyan (видимый цвет рамки!)
+  border    = 0x1D6680, -- Teal (видимый, но не резкий)
   title     = 0x268BD2, -- Blue (Bright)
   key       = 0xB58900, -- Yellow
   key_bg    = 0x002B36,
-  
+
   ok        = 0x859900, -- Green
   warn      = 0xB58900, -- Yellow
   ring_down = 0xDC322F, -- Red
@@ -40,11 +40,11 @@ local STATUS_COLOR = {
 }
 
 local STATUS_LABEL = {
-  OK          = "[  OK  ]",
-  PARTIAL     = "[ STBY ]",
-  MAINTENANCE = "[ PROB ]",
-  RING_DOWN   = "[ DOWN ]",
-  UNKNOWN     = "[ ???? ]"
+  OK          = "[ OK ]",
+  PARTIAL     = "[STBY]",
+  MAINTENANCE = "[PROB]",
+  RING_DOWN   = "[DOWN]",
+  UNKNOWN     = "[????]"
 }
 
 -- ─── Internal Helpers ──────────────────────────────────────────────────────
@@ -96,16 +96,19 @@ end
 
 local function drawHeader(title, subtitle)
   -- Верхняя рамка
-  g_set(1, 1, "+" .. string.rep("=", W - 2) .. "+", C.border, C.bg)
-  
-  -- Строка заголовка
+  g_set(1, 1, "+" .. string.rep("-", W - 2) .. "+", C.border, C.bg)
+
+  -- Строка заголовка: "| ==[ TITLE ]========...= |"
   g_set(1, 2, "|", C.border, C.bg)
-  local deco = "==[ " .. title .. " ]" .. string.rep("=", W - #title - 6)
-  g_set(2, 2, deco, C.title, C.bg)
+  local inner = W - 2  -- ширина внутри рамки
+  local tag = "==[ " .. title .. " ]"
+  local fill = string.rep("=", math.max(0, inner - #tag))
+  g_set(2, 2, tag .. fill, C.title, C.bg)
   g_set(W, 2, "|", C.border, C.bg)
-  
+
   -- Строка подзаголовка
   g_set(1, 3, "|", C.border, C.bg)
+  g_fill(2, 3, W - 2, 1, " ", C.dim, C.bg)
   if subtitle then
     g_set(3, 3, "STATUS: " .. subtitle, C.dim, C.bg)
   end
@@ -113,27 +116,25 @@ local function drawHeader(title, subtitle)
 end
 
 local function drawFooter(keys)
-  -- Разделитель перед кнопками
-  g_set(1, H - 2, "+" .. string.rep("=", W - 2) .. "+", C.border, C.bg)
-  
-  -- Кнопки в подвале (на предпоследней строке)
+  -- Разделитель
+  g_set(1, H - 2, "+" .. string.rep("-", W - 2) .. "+", C.border, C.bg)
+
+  -- Кнопки
+  g_fill(2, H - 1, W - 2, 1, " ", C.text, C.bg)
   g_set(1, H - 1, "|", C.border, C.bg)
   local x = 3
   for _, k in ipairs(keys) do
-    if x >= W - 5 then break end
+    if x >= W - 4 then break end
     g_set(x, H - 1, "[" .. k[1] .. "]", C.key, C.bg)
-    x = x + #k[1] + 1
+    -- [  ] = 2 символа + сам ключ, +1 пробел перед описанием
+    x = x + #k[1] + 3
     g_set(x, H - 1, k[2], C.text, C.bg)
     x = x + #k[2] + 2
   end
-  -- Заполняем пустоту до конца строки
-  if x < W then
-    g_set(x, H - 1, string.rep(" ", W - x), C.text, C.bg)
-  end
   g_set(W, H - 1, "|", C.border, C.bg)
-  
-  -- Нижняя рамка (на самой последней строке)
-  g_set(1, H, "+" .. string.rep("=", W - 2) .. "+", C.border, C.bg)
+
+  -- Нижняя рамка
+  g_set(1, H, "+" .. string.rep("-", W - 2) .. "+", C.border, C.bg)
 end
 
 -- ─── API ───────────────────────────────────────────────────────────────────
