@@ -201,7 +201,8 @@ local PLANET_LIST = {
   "Pluto", "Kuiper Belt", "Haumea", "Makemake", "Eris",
   "Ceres", "Phobos", "Deimos",
   "Proxima B", "Barnarda C", "Barnarda E", "Barnarda F",
-  "Ross 128 B", "Ross 128 C", "Ross128ba", "Tau Ceti F", "T Ceti E",
+  "Ross 128 B", "Ross 128 C", "Ross128ba", 
+  "Tau Ceti B", "Tau Ceti C", "Tau Ceti D", "Tau Ceti E", "Tau Ceti F", "Tau Ceti G",
   "Kepler 22b", "Kepler 47c", "Kepler 62e", "Kepler 62f",
   "Sirius B", "Sirius C", "Centauri A", "Vega B", "Arcturus",
   "Antares", "Betelgeuse", "Rigel", "Aldebaran", "Polaris", "Neper"
