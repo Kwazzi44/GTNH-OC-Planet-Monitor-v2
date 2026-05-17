@@ -356,6 +356,15 @@ runSetup = function()
   ui.lsc_addr = config.lsc_address
   
   registry.load()
+
+  -- Очищаем экран цветом UI (0x002B36), чтобы убрать черноту после сетапа
+  if component.isAvailable("gpu") then
+    local gpu = component.gpu
+    gpu.setBackground(0x002B36)
+    local w, h = gpu.getResolution()
+    gpu.fill(1, 1, w, h, " ")
+  end
+
   ui.dirty = true
 end
 
