@@ -30,6 +30,7 @@ local ui = {
   log_scroll    = nil,
   detail_planet = nil,   -- имя планеты в detail-view
   dirty         = true,
+  full_redraw   = true,
   notify        = nil,   -- { msg, color, until_t }
   last_draw     = 0,
   sensor_data       = nil,
@@ -188,6 +189,7 @@ local function openDetail()
   ui.machine_scroll = 1
   ui.view           = VIEW.DETAIL
   ui.dirty          = true
+  ui.full_redraw    = true
 end
 
 -- ─── Keyboard & Mouse Handlers ──────────────────────────────────────────
@@ -199,11 +201,11 @@ local function onKey(_, _, char, code)
   end
   -- B → назад (code 48 или Backspace = 14)
   if code == 48 or code == 14 then
-    ui.view = VIEW.PLANETS; ui.dirty = true; return
+    ui.view = VIEW.PLANETS; ui.dirty = true; ui.full_redraw = true; return
   end
   -- F4 → лог (code 62)
   if code == 62 then
-    ui.log_scroll = nil; ui.view = VIEW.LOG; ui.dirty = true; return
+    ui.log_scroll = nil; ui.view = VIEW.LOG; ui.dirty = true; ui.full_redraw = true; return
   end
   -- F3 → poll сейчас (code 61)
   if code == 61 then
@@ -410,6 +412,21 @@ end
 
 local function draw()
   local planets = registry.getPlanetList()
+
+  if ui.full_redraw then
+    gui.clear()
+    local vn = "LIST"
+    if ui.view == VIEW.DETAIL then vn = "DETAIL"
+    elseif ui.view == VIEW.LOG then vn = "LOG" end
+    
+    local p = nil
+    if ui.view == VIEW.DETAIL then
+      p = registry.get(ui.detail_planet)
+    end
+    
+    gui.drawStatic(vn, {planets = planets, planet = p})
+    ui.full_redraw = false
+  end
 
   if ui.view == VIEW.PLANETS then
     gui.drawPlanetList(planets, ui.planet_sel, ui.planet_scroll, stats)
