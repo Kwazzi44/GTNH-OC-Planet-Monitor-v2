@@ -70,7 +70,7 @@ io.write(string.format("\nDone: %d OK, %d FAILED\n", ok_n, fail_n))
 if fail_n == 0 then
 
   -- autorun.lua is now downloaded automatically
-  io.write("\nInstallation complete!\n")
-  io.write("To start, run:\n")
-  io.write("lua /home/hub/main.lua\n\n")
+  io.write("\nInstallation complete! Rebooting in 3 seconds...\n")
+  os.sleep(3)
+  require("computer").shutdown(true)
 end
