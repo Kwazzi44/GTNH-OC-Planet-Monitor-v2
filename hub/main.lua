@@ -216,8 +216,8 @@ local function onKey(_, _, char, code)
   if (code == 20 or char == 116 or char == 84) and ui.view == VIEW.DETAIL then
     doToggleMachine(); return
   end
-  -- F2 → update + reboot (code 60)
-  if code == 60 and ui.view == VIEW.PLANETS then
+  -- F5 → update + reboot (code 63)
+  if code == 63 and ui.view == VIEW.PLANETS then
     runUpdate(); return
   end
   -- F1 → setup (code 59)

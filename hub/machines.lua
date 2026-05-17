@@ -280,33 +280,32 @@ function machines.toggle(m)
   end
 
   -- Попытка 1: setWorkAllowed (основной GT/GTNH API)
-  if type(proxy.setWorkAllowed) == "function" then
+  if proxy and proxy.setWorkAllowed then
     local current = true
-    if type(proxy.isWorkAllowed) == "function" then
-      local ok2, val = pcall(proxy.isWorkAllowed)
+    if proxy.isWorkAllowed then
+      local ok2, val = pcall(function() return proxy.isWorkAllowed() end)
       if ok2 and type(val) == "boolean" then current = val end
     end
-    local ok, err = pcall(proxy.setWorkAllowed, not current)
+    local ok, err = pcall(function() proxy.setWorkAllowed(not current) end)
     if ok then
       return true, (current and "Disabled" or "Enabled") .. " via setWorkAllowed"
     end
   end
 
   -- Попытка 2: setActive
-  if type(proxy.setActive) == "function" then
-    local current = m.active
-    local ok, err = pcall(proxy.setActive, not current)
+  if proxy and proxy.setActive then
+    local ok, err = pcall(function() proxy.setActive(not m.active) end)
     if ok then
-      return true, (current and "Disabled" or "Enabled") .. " via setActive"
+      return true, (m.active and "Disabled" or "Enabled") .. " via setActive"
     end
   end
 
   -- Попытка 3: enable/disable
-  if m.active and type(proxy.disable) == "function" then
-    local ok, err = pcall(proxy.disable)
+  if m.active and proxy and proxy.disable then
+    local ok = pcall(function() proxy.disable() end)
     if ok then return true, "Disabled via disable()" end
-  elseif not m.active and type(proxy.enable) == "function" then
-    local ok, err = pcall(proxy.enable)
+  elseif not m.active and proxy and proxy.enable then
+    local ok = pcall(function() proxy.enable() end)
     if ok then return true, "Enabled via enable()" end
   end
 

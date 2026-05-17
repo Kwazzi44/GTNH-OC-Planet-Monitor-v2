@@ -270,7 +270,7 @@ function gui.drawPlanetList(planets, sel, scroll, stats)
     {"A",     "Rst"},
     {"F4",    "Log"},
     {"F3",    "Rfsh"},
-    {"F2",    "Upd"},
+    {"F5",    "Upd"},
     {"F1",    "Setup"},
     {"Q",     "Quit"},
   })

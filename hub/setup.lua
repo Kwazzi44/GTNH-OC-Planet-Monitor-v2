@@ -1,9 +1,6 @@
 -- =============================================================================
--- hub/setup.lua — Setup Wizard (Pair: Adapter <-> Redstone side)
+-- hub/setup.lua — Setup Wizard (hub GUI style)
 -- =============================================================================
--- Запуск: lua /hub/setup.lua
--- Показывает ТОЛЬКО незарегистрированные адаптеры.
--- Каждый адаптер привязывается к планете + redstone-стороне.
 
 local component = require("component")
 local event     = require("event")
@@ -13,28 +10,30 @@ local registry  = require("registry")
 local mch       = require("machines")
 
 local gpu = component.isAvailable("gpu") and component.gpu or nil
-if not gpu then
-  io.write("GPU not found!\n")
-  return
-end
+if not gpu then io.write("GPU not found!\n"); return end
 
 local W, H = gpu.getResolution()
-local LEFT_W = 25
+
+-- ─── Цвета — идентичны gui.lua ──────────────────────────────────────────────
 
 local C = {
-  bg       = 0x0A0A1A,
-  fg       = 0xDDDDDD,
-  sel_bg   = 0x224488,
-  sel_fg   = 0xFFFFFF,
-  dim      = 0x556677,
-  border   = 0x1E3A6E,
-  title    = 0xFFFFFF,
-  warn     = 0xFF5555,
-  ok       = 0x55FF55,
+  bg      = 0x002B36,
+  sel_bg  = 0x073642,
+  sel_fg  = 0x268BD2,
+  text    = 0x839496,
+  dim     = 0x586E75,
+  border  = 0x1D6680,
+  title   = 0x268BD2,
+  key     = 0xB58900,
+  ok      = 0x859900,
+  warn    = 0xDC322F,
+  good    = 0x859900,
 }
 
 local config = {}
-local config_path = "config.lua"
+local config_path = "/home/hub/config.lua"
+
+-- ─── Config I/O ─────────────────────────────────────────────────────────────
 
 local function load_config()
   local fs = require("filesystem")
@@ -44,7 +43,6 @@ local function load_config()
   elseif fs.exists("/home/hub/config.lua") then
     config_path = "/home/hub/config.lua"
   end
-
   if fs.exists(config_path) then
     local ok, cfg = pcall(dofile, config_path)
     if ok and type(cfg) == "table" then config = cfg end
@@ -53,291 +51,319 @@ end
 
 local function save_config()
   local f = io.open(config_path, "w")
-  if f then
-    f:write("-- =============================================================================\n")
-    f:write("-- hub/config.lua — GTNH Planet Monitor Configuration\n")
-    f:write("-- =============================================================================\n\n")
-    f:write("local config = {}\n\n")
-    f:write("config.poll_interval = " .. tostring(config.poll_interval or 10) .. "\n")
-    f:write("config.lsc_address   = " .. (config.lsc_address and ("\"" .. config.lsc_address .. "\"") or "nil") .. "\n")
-    f:write("config.gui_refresh   = " .. tostring(config.gui_refresh or 0.5) .. "\n")
-    f:write("config.log_max_lines = " .. tostring(config.log_max_lines or 500) .. "\n")
-    f:write("config.registry_file = \"" .. (config.registry_file or "/home/planet_registry.json") .. "\"\n")
-    f:write("config.log_file      = \"" .. (config.log_file or "/home/planet_log.txt") .. "\"\n\n")
-    f:write("return config\n")
-    f:close()
-  end
+  if not f then return end
+  f:write("-- hub/config.lua\nlocal config = {}\n\n")
+  f:write("config.poll_interval = " .. tostring(config.poll_interval or 10) .. "\n")
+  f:write("config.lsc_address   = " .. (config.lsc_address and ('"' .. config.lsc_address .. '"') or "nil") .. "\n")
+  f:write("config.gui_refresh   = " .. tostring(config.gui_refresh or 0.5) .. "\n")
+  f:write("config.log_max_lines = " .. tostring(config.log_max_lines or 500) .. "\n")
+  f:write('config.registry_file = "' .. (config.registry_file or "/home/planet_registry.json") .. '"\n')
+  f:write('config.log_file      = "' .. (config.log_file or "/home/planet_log.txt") .. '"\n\n')
+  f:write("return config\n")
+  f:close()
 end
 
-local function clear()
-  gpu.setBackground(C.bg)
-  gpu.setForeground(C.fg)
-  gpu.fill(1, 1, W, H, " ")
-  -- Draw border
-  gpu.setBackground(C.border)
-  gpu.fill(LEFT_W + 1, 1, 1, H, " ")
-  gpu.setBackground(C.bg)
-end
+-- ─── Примитивы рисования ────────────────────────────────────────────────────
 
-local function drawText(x, y, text, fg, bg)
-  gpu.setForeground(fg or C.fg)
-  gpu.setBackground(bg or C.bg)
+local function gset(x, y, text, fg, bg)
+  if fg then gpu.setForeground(fg) end
+  if bg then gpu.setBackground(bg) end
   gpu.set(x, y, text)
 end
 
-local function header(txt)
-  drawText(LEFT_W + 3, 2, txt, C.title)
+local function gfill(x, y, w, h, ch, fg, bg)
+  if fg then gpu.setForeground(fg) end
+  if bg then gpu.setBackground(bg) end
+  gpu.fill(x, y, w, h, ch)
+end
+
+local function pad(s, n)
+  s = tostring(s)
+  if #s > n then return s:sub(1, n-1) .. "~" end
+  return s .. string.rep(" ", n - #s)
+end
+
+-- ─── Общий каркас экрана ────────────────────────────────────────────────────
+
+local LEFT_W = 22   -- ширина левой панели меню
+
+local function drawFrame()
+  gfill(1, 1, W, H, " ", C.text, C.bg)
+
+  -- Верхняя рамка
+  gset(1, 1, "+" .. string.rep("-", W-2) .. "+", C.border, C.bg)
+  -- Строка заголовка
+  gset(1, 2, "|", C.border, C.bg)
+  local tag = "==[ GTNH PLANET MONITOR - SETUP ]"
+  local fill = string.rep("=", math.max(0, W-2 - #tag))
+  gset(2, 2, tag .. fill, C.title, C.bg)
+  gset(W, 2, "|", C.border, C.bg)
+  -- Строка подзаголовка
+  gset(1, 3, "|", C.border, C.bg)
+  gfill(2, 3, W-2, 1, " ", C.dim, C.bg)
+  gset(3, 3, "STATUS: Setup Wizard", C.dim, C.bg)
+  gset(W, 3, "|", C.border, C.bg)
+  -- Разделитель под заголовком
+  gset(1, 4, "+" .. string.rep("-", W-2) .. "+", C.border, C.bg)
+
+  -- Боковые рамки от строки 5 до H-3
+  for row = 5, H-3 do
+    gset(1, row, "|", C.border, C.bg)
+    gset(W, row, "|", C.border, C.bg)
+  end
+
+  -- Вертикальный разделитель меню
+  for row = 4, H-3 do
+    gset(LEFT_W + 1, row, "|", C.border, C.bg)
+  end
+
+  -- Меню слева
+  gset(2, 5, "MENU", C.dim, C.bg)
 end
 
 local function drawFooter(keys)
-  gpu.setBackground(C.border)
-  gpu.fill(LEFT_W + 1, H, W - LEFT_W, 1, " ")
-  local x = LEFT_W + 3
+  gset(1, H-2, "+" .. string.rep("-", W-2) .. "+", C.border, C.bg)
+  gfill(2, H-1, W-2, 1, " ", C.text, C.bg)
+  gset(1, H-1, "|", C.border, C.bg)
+  local x = 3
   for _, k in ipairs(keys) do
-    if x >= W - 5 then break end
-    drawText(x, H, "[" .. k[1] .. "]", C.title, C.border)
-    x = x + #k[1] + 2
-    drawText(x, H, k[2], C.fg, C.border)
+    if x >= W - 4 then break end
+    gset(x, H-1, "[" .. k[1] .. "]", C.key, C.bg)
+    x = x + #k[1] + 3
+    gset(x, H-1, k[2], C.text, C.bg)
     x = x + #k[2] + 2
   end
-  gpu.setBackground(C.bg)
+  gset(W, H-1, "|", C.border, C.bg)
+  gset(1, H, "+" .. string.rep("-", W-2) .. "+", C.border, C.bg)
 end
 
 local function clearRight()
-  gpu.setBackground(C.bg)
-  gpu.fill(LEFT_W + 2, 1, W - LEFT_W - 1, H, " ")
+  gfill(LEFT_W+2, 5, W-LEFT_W-2, H-7, " ", C.text, C.bg)
+  -- Восстанавливаем правые боковые рамки
+  for row = 5, H-3 do
+    gset(W, row, "|", C.border, C.bg)
+  end
 end
 
--- =============================================================================
--- Simple Input Field
--- =============================================================================
+local function drawMenu(items, sel)
+  for i, item in ipairs(items) do
+    local y = 5 + i
+    if i == sel then
+      gfill(2, y, LEFT_W-1, 1, " ", C.sel_fg, C.sel_bg)
+      gset(3, y, item.label, C.sel_fg, C.sel_bg)
+    else
+      gfill(2, y, LEFT_W-1, 1, " ", C.text, C.bg)
+      gset(3, y, item.label, C.text, C.bg)
+    end
+  end
+end
+
+local function rightHeader(txt)
+  gset(LEFT_W+3, 5, txt, C.title, C.bg)
+  gset(LEFT_W+3, 6, string.rep("-", W-LEFT_W-4), C.border, C.bg)
+end
+
+-- ─── Ввод строки ────────────────────────────────────────────────────────────
 
 local function readInput(x, y, prompt, default)
-  gpu.setBackground(C.bg)
-  gpu.setForeground(C.fg)
-  gpu.set(x, y, prompt)
-  local px = x + unicode.len(prompt)
+  gset(x, y, prompt, C.dim, C.bg)
+  local px = x + #prompt
   local input = default or ""
-  
   while true do
-    gpu.fill(px, y, W - px, 1, " ")
-    gpu.setForeground(C.title)
-    gpu.set(px, y, input .. "_")
-    
+    gfill(px, y, W-px-1, 1, " ", C.text, C.bg)
+    gset(px, y, input .. "_", C.title, C.bg)
     local ev = table.pack(event.pull())
-    local e = ev[1]
-    
-    if e == "key_down" then
-      local _, char, code = ev[2], ev[3], ev[4]
-      if code == 28 then -- Enter
-        gpu.fill(px, y, W - px, 1, " ")
-        gpu.setForeground(C.ok)
-        gpu.set(px, y, input)
+    if ev[1] == "key_down" then
+      local char, code = ev[3], ev[4]
+      if code == 28 then
+        gfill(px, y, W-px-1, 1, " ", C.text, C.bg)
+        gset(px, y, input, C.ok, C.bg)
         return input
-      elseif code == 14 then -- Backspace
-        if unicode.len(input) > 0 then
-          input = unicode.sub(input, 1, -2)
-        end
+      elseif code == 14 and unicode.len(input) > 0 then
+        input = unicode.sub(input, 1, -2)
       elseif char > 31 then
         input = input .. unicode.char(char)
       end
-    elseif e == "clipboard" then
-      local text = ev[3]
-      if text then
-        input = input .. text
-      end
+    elseif ev[1] == "clipboard" and ev[3] then
+      input = input .. ev[3]
     end
   end
 end
 
--- =============================================================================
--- VIEWS
--- =============================================================================
+-- ─── SCAN VIEW ──────────────────────────────────────────────────────────────
 
 local function buildTaken()
-  local ta, tr = {}, {}
+  local ta = {}
   for _, p in pairs(registry.getAll()) do
     for _, m in ipairs(p.machines or {}) do
-      ta[m.adapter_addr] = p.name .. " / " .. m.name
-      if m.redstone and m.redstone.addr then tr[m.redstone.addr] = p.name .. " / " .. m.name end
+      ta[m.adapter_addr] = p.name .. "/" .. m.name
     end
   end
-  return ta, tr
+  return ta
 end
 
 local function viewScan()
-  clearRight()
   local rx = LEFT_W + 3
-  drawText(rx, 2, "--- SCANNING NETWORK ---", C.title)
-  
+  clearRight()
+  rightHeader("--- SCANNING NETWORK ---")
+  gset(rx, 8, "Scanning...", C.dim, C.bg)
+
   local adapters = mch.scanNetwork()
-  local taken_a, taken_r = buildTaken()
-  
+  local taken_a  = buildTaken()
+
   local free_a = {}
   for _, gm in ipairs(adapters) do
-    if not taken_a[gm.addr] and not registry.isIgnored(gm.addr) and gm.addr ~= registry.getLSC() then table.insert(free_a, gm) end
+    if not taken_a[gm.addr] and not registry.isIgnored(gm.addr)
+       and gm.addr ~= registry.getLSC() then
+      table.insert(free_a, gm)
+    end
   end
-  
+
+  clearRight()
+  rightHeader("--- SCAN RESULTS ---")
+
   if #free_a == 0 then
-    drawText(rx, 4, "No unregistered GT machines found.", C.warn)
-    drawText(rx, 5, "Press Enter to return...")
+    gset(rx, 8, "No unregistered GT machines found.", C.warn, C.bg)
+    gset(rx, 10, "Press Enter to return...", C.dim, C.bg)
+    drawFooter({{"Enter", "Back"}})
     while true do
       local _, _, _, code = event.pull("key_down")
-      if code == 28 then return end
+      if code == 28 or code == 1 then return end
     end
   end
-  
-  drawText(rx, 4, "Found " .. #free_a .. " unregistered machines:", C.ok)
-  
+
+  gset(rx, 8, "Found " .. #free_a .. " unregistered machine(s)", C.ok, C.bg)
+
   for i, gm in ipairs(free_a) do
     clearRight()
-    drawText(rx, 2, "--- ADDING MACHINE (" .. i .. "/" .. #free_a .. ") ---", C.title)
-    drawText(rx, 4, "Type:    " .. gm.name)
-    drawText(rx, 5, "Address: " .. string.sub(gm.addr, 1, 16) .. "...")
-    
-    drawText(rx, 7, "Action: (y)es, (n)o, (i)gnore, (l)sc")
-    local ans = readInput(rx, 8, "> ", "")
-    local l_ans = ans:lower()
-    if l_ans == "y" then
-      local pname = readInput(rx, 10, "Planet name: ", "Earth")
-      local mname = readInput(rx, 11, "Machine name: ", gm.name)
-      
+    rightHeader("--- MACHINE " .. i .. "/" .. #free_a .. " ---")
+    gset(rx, 8,  "Type:    " .. pad(gm.name, 40), C.text, C.bg)
+    gset(rx, 9,  "Address: " .. string.sub(gm.addr, 1, 20) .. "...", C.dim, C.bg)
+    gset(rx, 11, "(y) Register   (n) Skip   (i) Ignore   (l) Set as LSC", C.dim, C.bg)
+    drawFooter({{"Y", "Register"}, {"N", "Skip"}, {"I", "Ignore"}, {"L", "LSC"}, {"Esc", "Cancel"}})
+
+    local ans = readInput(rx, 12, "> ", "")
+    local la  = ans:lower()
+
+    if la == "y" then
+      local pname = readInput(rx, 14, "Planet name: ", "Earth")
+      local mname = readInput(rx, 15, "Machine name: ", gm.name)
       registry.addPlanet(pname)
-      registry.addMachine(pname, {
-        name = mname,
-        adapter_addr = gm.addr,
-      })
-      drawText(rx, 13, "Registered! (Redstone can be configured later)", C.ok)
+      registry.addMachine(pname, { name = mname, adapter_addr = gm.addr })
+      gset(rx, 17, "[OK] Registered!", C.ok, C.bg)
       os.sleep(1)
-    elseif l_ans == "i" then
+    elseif la == "i" then
       registry.ignoreAdapter(gm.addr)
-      drawText(rx, 10, "Ignored! Won't show up in scan anymore.", C.dim)
+      gset(rx, 14, "[OK] Ignored.", C.dim, C.bg)
       os.sleep(1)
-    elseif l_ans == "l" then
+    elseif la == "l" then
       registry.setLSC(gm.addr)
-      drawText(rx, 10, "LSC successfully bound to this adapter!", C.ok)
+      gset(rx, 14, "[OK] Set as LSC.", C.ok, C.bg)
       os.sleep(1.5)
+    elseif la == "n" then
+      -- пропустить
+    else
+      -- Esc или что-то другое — выходим
+      return
     end
   end
 end
 
+-- ─── DATABASE VIEW ──────────────────────────────────────────────────────────
 
 local function viewDatabase()
-  local rx = LEFT_W + 3
-  local planets = registry.getPlanetList()
-  
-  local sel_p = 1
-  
-  while true do
+  local rx     = LEFT_W + 3
+  local sel_p  = 1
+  local in_db  = true
+
+  while in_db do
+    local planets = registry.getPlanetList()
     clearRight()
-    drawText(rx, 2, "--- DATABASE MANAGEMENT ---", C.title)
-    
+    rightHeader("--- DATABASE ---")
+
     if #planets == 0 then
-      drawText(rx, 4, "Registry is empty.", C.dim)
-      drawText(rx, 6, "Press Enter to return...")
+      gset(rx, 8, "Registry is empty.", C.dim, C.bg)
+      gset(rx, 10, "Press Enter to return...", C.dim, C.bg)
+      drawFooter({{"Enter", "Back"}})
       while true do
         local _, _, _, code = event.pull("key_down")
-        if code == 28 then return end
+        if code == 28 or code == 1 then return end
       end
     end
-    
-    -- Draw planets
+
     for i, p in ipairs(planets) do
-      local y = 3 + i
+      local y = 7 + i
+      if y > H-5 then break end
+      local label = pad(string.format("%02d  %s  (%d machines)", i, p.name, #(p.machines or {})), W-LEFT_W-4)
       if i == sel_p then
-        gpu.setBackground(C.sel_bg)
-        gpu.setForeground(C.sel_fg)
-        gpu.fill(rx, y, W - rx, 1, " ")
+        gfill(rx, y, W-LEFT_W-3, 1, " ", C.sel_fg, C.sel_bg)
+        gset(rx, y, label, C.sel_fg, C.sel_bg)
       else
-        gpu.setBackground(C.bg)
-        gpu.setForeground(C.fg)
+        gfill(rx, y, W-LEFT_W-3, 1, " ", C.text, C.bg)
+        gset(rx, y, label, C.text, C.bg)
       end
-      gpu.set(rx, y, p.name .. " (" .. #(p.machines or {}) .. " machines)")
     end
-    gpu.setBackground(C.bg)
-    
-    drawFooter({{"Enter", "Select"}, {"Del", "Delete"}, {"B", "Back"}})
-    
-    local action = nil
+
+    drawFooter({{"^v", "Nav"}, {"Enter", "Machines"}, {"Del", "Delete"}, {"B", "Back"}})
+
     local ev = table.pack(event.pull())
-    local e = ev[1]
-    
-    if e == "key_down" then
+    if ev[1] == "key_down" then
       local code = ev[4]
-      if code == 200 then action = "up"
-      elseif code == 208 then action = "down"
-      elseif code == 14 or code == 1 or code == 48 then action = "back"
-      elseif code == 211 then action = "delete"
-      elseif code == 28 then action = "enter"
-      end
-    end
-    
-    if action == "up" and sel_p > 1 then sel_p = sel_p - 1
-    elseif action == "down" and sel_p < #planets then sel_p = sel_p + 1
-    elseif action == "back" then return
-    elseif action == "delete" then
-      local p = planets[sel_p]
-      drawText(rx, H-4, "Delete " .. p.name .. "? (y/n)", C.warn)
-      local ans = readInput(rx, H-3, "> ", "")
-      if ans:lower() == "y" then
-        registry.removePlanet(p.name)
-        planets = registry.getPlanetList()
-        if sel_p > #planets then sel_p = math.max(1, #planets) end
-      end
-    elseif action == "enter" then
-      local p = planets[sel_p]
-      local sel_m = 1
-      local in_machines = true
-      
-      while in_machines do
+      if code == 200 and sel_p > 1 then sel_p = sel_p - 1
+      elseif code == 208 and sel_p < #planets then sel_p = sel_p + 1
+      elseif code == 14 or code == 1 or code == 48 then in_db = false
+      elseif code == 211 then
+        local p = planets[sel_p]
         clearRight()
-        drawText(rx, 2, "--- PLANET: " .. p.name .. " ---", C.title)
-        
-        if #(p.machines or {}) == 0 then
-          drawText(rx, 4, "No machines.", C.dim)
-        else
-          for j, m in ipairs(p.machines) do
-            local my = 3 + j
-            if j == sel_m then
-              gpu.setBackground(C.sel_bg); gpu.setForeground(C.sel_fg)
-              gpu.fill(rx, my, W - rx, 1, " ")
+        rightHeader("--- DELETE PLANET? ---")
+        gset(rx, 8, "Delete planet: " .. p.name .. "?", C.warn, C.bg)
+        local ans = readInput(rx, 10, "Confirm (y/n): ", "")
+        if ans:lower() == "y" then
+          registry.removePlanet(p.name)
+          if sel_p > #registry.getPlanetList() then sel_p = math.max(1, #registry.getPlanetList()) end
+        end
+      elseif code == 28 then
+        -- Просмотр машин планеты
+        local p  = planets[sel_p]
+        local sm = 1
+        local in_machines = true
+        while in_machines do
+          clearRight()
+          rightHeader("--- " .. p.name:upper() .. " ---")
+          local mlist = p.machines or {}
+          for j, m in ipairs(mlist) do
+            local y = 7 + j
+            if y > H-5 then break end
+            local ml = pad(string.format("%02d  %s  [%s]", j, m.name, m.adapter_addr:sub(1,8)), W-LEFT_W-4)
+            if j == sm then
+              gfill(rx, y, W-LEFT_W-3, 1, " ", C.sel_fg, C.sel_bg)
+              gset(rx, y, ml, C.sel_fg, C.sel_bg)
             else
-              gpu.setBackground(C.bg); gpu.setForeground(C.fg)
+              gfill(rx, y, W-LEFT_W-3, 1, " ", C.text, C.bg)
+              gset(rx, y, ml, C.text, C.bg)
             end
-            gpu.set(rx, my, m.name .. " (" .. string.sub(m.adapter_addr, 1, 8) .. ")")
           end
-        end
-        gpu.setBackground(C.bg)
-        drawFooter({{"R", "Rename"}, {"Del", "Delete"}, {"B", "Back"}})
-        
-        local maction = nil
-        local mev = table.pack(event.pull())
-        local me = mev[1]
-        
-        if me == "key_down" then
-          local mcode = mev[4]
-          if mcode == 200 then maction = "up"
-          elseif mcode == 208 then maction = "down"
-          elseif mcode == 1 or mcode == 14 or mcode == 48 then maction = "back"
-          elseif mcode == 19 then maction = "rename"
-          elseif mcode == 211 then maction = "delete"
-          end
-        end
-        
-        if maction == "up" and sel_m > 1 then sel_m = sel_m - 1
-        elseif maction == "down" and sel_m < #(p.machines or {}) then sel_m = sel_m + 1
-        elseif maction == "back" then in_machines = false
-        elseif maction == "rename" then
-          local m = p.machines[sel_m]
-          local newName = readInput(rx, H-4, "New name: ", m.name)
-          if newName ~= "" then m.name = newName; registry.save() end
-        elseif maction == "delete" then
-          local m = p.machines[sel_m]
-          drawText(rx, H-4, "Delete " .. m.name .. "? (y/n)", C.warn)
-          local ans = readInput(rx, H-3, "> ", "")
-          if ans:lower() == "y" then
-            registry.removeMachine(p.name, m.adapter_addr)
-            if sel_m > #(p.machines or {}) then sel_m = math.max(1, #(p.machines or {})) end
+          if #mlist == 0 then gset(rx, 8, "No machines.", C.dim, C.bg) end
+          drawFooter({{"^v", "Nav"}, {"R", "Rename"}, {"Del", "Delete"}, {"B", "Back"}})
+
+          local mev = table.pack(event.pull())
+          if mev[1] == "key_down" then
+            local mc = mev[4]
+            if mc == 200 and sm > 1 then sm = sm - 1
+            elseif mc == 208 and sm < #mlist then sm = sm + 1
+            elseif mc == 1 or mc == 14 or mc == 48 then in_machines = false
+            elseif mc == 19 and mlist[sm] then  -- R = rename
+              local m = mlist[sm]
+              local nn = readInput(rx, H-4, "New name: ", m.name)
+              if nn ~= "" then m.name = nn; registry.save() end
+            elseif mc == 211 and mlist[sm] then  -- Del
+              local m = mlist[sm]
+              local ans = readInput(rx, H-4, "Delete " .. m.name .. "? (y/n): ", "")
+              if ans:lower() == "y" then
+                registry.removeMachine(p.name, m.adapter_addr)
+                if sm > #(p.machines or {}) then sm = math.max(1, #(p.machines or {})) end
+              end
+            end
           end
         end
       end
@@ -345,82 +371,57 @@ local function viewDatabase()
   end
 end
 
--- =============================================================================
--- MAIN MENU
--- =============================================================================
+-- ─── ГЛАВНОЕ МЕНЮ ───────────────────────────────────────────────────────────
 
 local MENU_ITEMS = {
-  { label = "Scan New Machines",  fn = viewScan },
-  { label = "Manage Database",    fn = viewDatabase },
-  { label = "Exit Setup Wizard",  fn = function() return "exit" end },
+  { label = "Scan New Machines", fn = viewScan     },
+  { label = "Manage Database",   fn = viewDatabase },
+  { label = "Exit Setup",        fn = function() return "exit" end },
 }
-
-local function drawMainMenu(sel)
-  for i, item in ipairs(MENU_ITEMS) do
-    local y = 3 + (i * 2)
-    if i == sel then
-      gpu.setBackground(C.sel_bg)
-      gpu.setForeground(C.sel_fg)
-      gpu.fill(2, y, LEFT_W - 2, 1, " ")
-    else
-      gpu.setBackground(C.bg)
-      gpu.setForeground(C.title)
-    end
-    gpu.set(4, y, item.label)
-  end
-  gpu.setBackground(C.bg)
-end
 
 local function run()
   load_config()
   registry.load()
-  clear()
-  
-  drawText(2, 2, "GTNH Planet Monitor", C.ok)
-  drawText(2, 3, "Setup Wizard", C.dim)
-  
+  drawFrame()
+  drawMenu(MENU_ITEMS, 1)
+  drawFooter({{"^v", "Nav"}, {"Enter", "Select"}, {"Esc", "Exit"}})
+
   local sel = 1
-  drawMainMenu(sel)
-  
   while true do
+    drawMenu(MENU_ITEMS, sel)
     local ev = table.pack(event.pull())
-    local e = ev[1]
-    
-    if e == "key_down" then
+    if ev[1] == "key_down" then
       local code = ev[4]
-      if code == 200 then -- Up
-        if sel > 1 then sel = sel - 1; drawMainMenu(sel) end
-      elseif code == 208 then -- Down
-        if sel < #MENU_ITEMS then sel = sel + 1; drawMainMenu(sel) end
-      elseif code == 28 or code == 205 then -- Enter or Right Arrow
+      if code == 200 and sel > 1 then sel = sel - 1
+      elseif code == 208 and sel < #MENU_ITEMS then sel = sel + 1
+      elseif code == 1 then break  -- Esc
+      elseif code == 28 or code == 205 then
         local res = MENU_ITEMS[sel].fn()
         if res == "exit" then break end
-        -- Redraw full screen after returning
-        clear()
-        drawText(2, 2, "GTNH Planet Monitor", C.ok)
-        drawText(2, 3, "Setup Wizard", C.dim)
-        drawMainMenu(sel)
+        -- Перерисовка после возврата
+        drawFrame()
+        drawMenu(MENU_ITEMS, sel)
+        drawFooter({{"^v", "Nav"}, {"Enter", "Select"}, {"Esc", "Exit"}})
       end
-    elseif e == "touch" then
-      local tx, ty, tbtn = ev[3], ev[4], ev[5]
-      if tbtn == 0 and tx <= LEFT_W then
+    elseif ev[1] == "touch" then
+      local tx, ty = ev[3], ev[4]
+      if tx <= LEFT_W then
         for i, _ in ipairs(MENU_ITEMS) do
-          if ty == 3 + (i * 2) then
+          if ty == 5 + i then
             sel = i
-            drawMainMenu(sel)
             local res = MENU_ITEMS[sel].fn()
-            if res == "exit" then return end
-            clear()
-            drawText(2, 2, "GTNH Planet Monitor", C.ok)
-            drawText(2, 3, "Setup Wizard", C.dim)
-            drawMainMenu(sel)
+            if res == "exit" then goto done end
+            drawFrame()
+            drawMenu(MENU_ITEMS, sel)
+            drawFooter({{"^v", "Nav"}, {"Enter", "Select"}, {"Esc", "Exit"}})
             break
           end
         end
       end
     end
   end
-  
+  ::done::
+
   gpu.setBackground(0x000000)
   gpu.setForeground(0xFFFFFF)
   gpu.fill(1, 1, W, H, " ")
@@ -429,10 +430,10 @@ end
 local ok, err = pcall(run)
 if not ok then
   gpu.setBackground(0x000000)
-  gpu.setForeground(0xFF0000)
+  gpu.setForeground(0xFF2244)
   gpu.fill(1, 1, W, H, " ")
-  gpu.set(1, 1, "FATAL ERROR IN SETUP:")
+  gpu.set(1, 1, "SETUP ERROR:")
   gpu.set(1, 3, tostring(err))
-  gpu.set(1, H, "Press any key to exit...")
-  require("event").pull("key_down")
+  gpu.set(1, H, "Press any key...")
+  event.pull("key_down")
 end
