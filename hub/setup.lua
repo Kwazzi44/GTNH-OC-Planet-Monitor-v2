@@ -193,19 +193,19 @@ end
 -- ─── База данных планет GTNH ────────────────────────────────────────────────
 
 local PLANET_LIST = {
-  "Overworld", "Moon", "Mars", "Asteroids", "Venus", "Mercury", 
-  "Jupiter", "Europa", "Ganymede", "Callisto", "Io",
-  "Saturn", "Titan", "Enceladus", 
-  "Uranus", "Miranda", "Oberon", 
-  "Neptune", "Triton", "Proteus",
-  "Pluto", "Kuiper Belt", "Haumea", "Makemake", "Eris",
-  "Ceres", "Phobos", "Deimos",
-  "Proxima B", "Barnarda C", "Barnarda E", "Barnarda F",
-  "Ross 128 B", "Ross 128 C", "Ross128ba", 
-  "Tau Ceti B", "Tau Ceti C", "Tau Ceti D", "Tau Ceti E", "Tau Ceti F", "Tau Ceti G",
-  "Kepler 22b", "Kepler 47c", "Kepler 62e", "Kepler 62f",
-  "Sirius B", "Sirius C", "Centauri A", "Vega B", "Arcturus",
-  "Antares", "Betelgeuse", "Rigel", "Aldebaran", "Polaris", "Neper"
+  "Overworld (Tier 0)", "Moon (Tier 1)", "Mars (Tier 2)", "Phobos (Tier 2)", "Deimos (Tier 2)",
+  "Asteroids (Tier 3)", "Ceres (Tier 3)", "Europa (Tier 3)", "Ganymede (Tier 3)", "Callisto (Tier 3)", "Ross 128 B (Tier 3)",
+  "Venus (Tier 4)", "Mercury (Tier 4)", "Io (Tier 4)",
+  "Jupiter (Tier 3)", "Saturn (Tier 5)", "Titan (Tier 5)", "Enceladus (Tier 5)", 
+  "Uranus (Tier 5)", "Miranda (Tier 5)", "Oberon (Tier 5)", "Ross128ba (Tier 5)",
+  "Neptune (Tier 6)", "Triton (Tier 6)", "Proteus (Tier 6)",
+  "Pluto (Tier 7)", "Kuiper Belt (Tier 7)", "Haumea (Tier 7)", "Makemake (Tier 7)", "Eris (Tier 7)",
+  "Proxima B (Tier 8)", "Barnarda C (Tier 8)", "Barnarda E (Tier 8)", "Barnarda F (Tier 8)",
+  "Ross 128 C (Tier 8)", "Tau Ceti F (Tier 8)", "Tau Ceti B (Tier 8)", "Tau Ceti C (Tier 8)", "Tau Ceti D (Tier 8)", "Tau Ceti E (Tier 8)", "Tau Ceti G (Tier 8)",
+  "Kepler 22b (Tier 8)", "Kepler 47c (Tier 8)", "Kepler 62e (Tier 8)", "Kepler 62f (Tier 8)",
+  "Sirius B (Tier 8)", "Sirius C (Tier 8)", "Centauri A (Tier 8)", "Vega B (Tier 8)", "Arcturus (Tier 8)",
+  "Antares (Tier 8)", "Betelgeuse (Tier 8)", "Rigel (Tier 8)", "Aldebaran (Tier 8)", "Polaris (Tier 8)", 
+  "Neper (Tier 9)"
 }
 
 local function pickPlanet(x, y, prompt)
