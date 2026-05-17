@@ -304,7 +304,7 @@ local function viewDatabase()
       end
     end
 
-    drawFooter({{"^v", "Nav"}, {"Enter", "Machines"}, {"Del", "Delete"}, {"B", "Back"}})
+    drawFooter({{"Up/Dn", "Move"}, {"Enter", "Machines"}, {"Del", "Delete"}, {"B", "Back"}})
 
     local ev = table.pack(event.pull())
     if ev[1] == "key_down" then
@@ -344,7 +344,7 @@ local function viewDatabase()
             end
           end
           if #mlist == 0 then gset(rx, 8, "No machines.", C.dim, C.bg) end
-          drawFooter({{"^v", "Nav"}, {"R", "Rename"}, {"Del", "Delete"}, {"B", "Back"}})
+          drawFooter({{"Up/Dn", "Move"}, {"R", "Rename"}, {"Del", "Delete"}, {"B", "Back"}})
 
           local mev = table.pack(event.pull())
           if mev[1] == "key_down" then
@@ -384,7 +384,7 @@ local function run()
   registry.load()
   drawFrame()
   drawMenu(MENU_ITEMS, 1)
-  drawFooter({{"^v", "Nav"}, {"Enter", "Select"}, {"Esc", "Exit"}})
+  drawFooter({{"Up/Dn", "Move"}, {"Enter", "Select"}, {"Esc", "Exit"}})
 
   local sel = 1
   while true do
@@ -401,7 +401,7 @@ local function run()
         -- Перерисовка после возврата
         drawFrame()
         drawMenu(MENU_ITEMS, sel)
-        drawFooter({{"^v", "Nav"}, {"Enter", "Select"}, {"Esc", "Exit"}})
+        drawFooter({{"Up/Dn", "Move"}, {"Enter", "Select"}, {"Esc", "Exit"}})
       end
     elseif ev[1] == "touch" then
       local tx, ty = ev[3], ev[4]
@@ -413,7 +413,7 @@ local function run()
             if res == "exit" then goto done end
             drawFrame()
             drawMenu(MENU_ITEMS, sel)
-            drawFooter({{"^v", "Nav"}, {"Enter", "Select"}, {"Esc", "Exit"}})
+            drawFooter({{"Up/Dn", "Move"}, {"Enter", "Select"}, {"Esc", "Exit"}})
             break
           end
         end
