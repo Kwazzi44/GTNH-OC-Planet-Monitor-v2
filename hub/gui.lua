@@ -96,28 +96,28 @@ end
 
 local function drawHeader(title, subtitle)
   -- Верхняя рамка
-  g_set(1, 1, "╔" .. string.rep("═", W - 2) .. "╗", C.border, C.bg)
+  g_set(1, 1, "+" .. string.rep("=", W - 2) .. "+", C.border, C.bg)
   
   -- Строка заголовка
-  g_set(1, 2, "║", C.border, C.bg)
-  local deco = "══[ " .. title .. " ]" .. string.rep("═", W - #title - 6)
+  g_set(1, 2, "|", C.border, C.bg)
+  local deco = "==[ " .. title .. " ]" .. string.rep("=", W - #title - 6)
   g_set(2, 2, deco, C.title, C.bg)
-  g_set(W, 2, "║", C.border, C.bg)
+  g_set(W, 2, "|", C.border, C.bg)
   
   -- Строка подзаголовка
-  g_set(1, 3, "║", C.border, C.bg)
+  g_set(1, 3, "|", C.border, C.bg)
   if subtitle then
     g_set(3, 3, "STATUS: " .. subtitle, C.dim, C.bg)
   end
-  g_set(W, 3, "║", C.border, C.bg)
+  g_set(W, 3, "|", C.border, C.bg)
 end
 
 local function drawFooter(keys)
   -- Разделитель перед кнопками
-  g_set(1, H - 2, "╠" .. string.rep("═", W - 2) .. "╣", C.border, C.bg)
+  g_set(1, H - 2, "+" .. string.rep("=", W - 2) .. "+", C.border, C.bg)
   
   -- Кнопки в подвале (на предпоследней строке)
-  g_set(1, H - 1, "║", C.border, C.bg)
+  g_set(1, H - 1, "|", C.border, C.bg)
   local x = 3
   for _, k in ipairs(keys) do
     if x >= W - 5 then break end
@@ -130,10 +130,10 @@ local function drawFooter(keys)
   if x < W then
     g_set(x, H - 1, string.rep(" ", W - x), C.text, C.bg)
   end
-  g_set(W, H - 1, "║", C.border, C.bg)
+  g_set(W, H - 1, "|", C.border, C.bg)
   
   -- Нижняя рамка (на самой последней строке)
-  g_set(1, H, "╚" .. string.rep("═", W - 2) .. "╝", C.border, C.bg)
+  g_set(1, H, "+" .. string.rep("=", W - 2) .. "+", C.border, C.bg)
 end
 
 -- ─── API ───────────────────────────────────────────────────────────────────
@@ -152,7 +152,7 @@ function gui.clear()
 end
 
 function gui.drawPlanetList(planets, sel, scroll, stats)
-  g_fill(1, 4, W, H-4, " ", C.text, C.bg)
+  -- Удален g_fill для предотвращения мерцания
   
   local total_nodes = 0
   for _, p in ipairs(planets) do
@@ -173,8 +173,8 @@ function gui.drawPlanetList(planets, sel, scroll, stats)
   local c6 = math.floor(W * 0.8)  -- MACHINES
   
   -- Рисуем боковые рамки для строки заголовков
-  g_set(1, HY, "║", C.border, C.bg)
-  g_set(W, HY, "║", C.border, C.bg)
+  g_set(1, HY, "|", C.border, C.bg)
+  g_set(W, HY, "|", C.border, C.bg)
   
   g_set(c1, HY, "#",  C.dim, C.bg)
   g_set(c2, HY, "PLANET NAME", C.dim, C.bg)
@@ -184,7 +184,7 @@ function gui.drawPlanetList(planets, sel, scroll, stats)
   g_set(c6, HY, "MACHINES", C.dim, C.bg)
 
   -- Разделитель на строке 5
-  g_set(1, 5, "╠" .. string.rep("═", W - 2) .. "╣", C.border, C.bg)
+  g_set(1, 5, "+" .. string.rep("=", W - 2) .. "+", C.border, C.bg)
 
   local LIST_Y = 6
   local LIST_H = H - LIST_Y - 5 -- 5 строк зарезервировано под подвал и статусы
@@ -195,8 +195,8 @@ function gui.drawPlanetList(planets, sel, scroll, stats)
     local ry  = LIST_Y + i
     
     -- Рисуем боковые рамки для всех строк списка
-    g_set(1, ry, "║", C.border, C.bg)
-    g_set(W, ry, "║", C.border, C.bg)
+    g_set(1, ry, "|", C.border, C.bg)
+    g_set(W, ry, "|", C.border, C.bg)
     
     if idx <= #planets then
       local p = planets[idx]
@@ -227,19 +227,22 @@ function gui.drawPlanetList(planets, sel, scroll, stats)
       
       g_set(c5, ry, pad(timeAgo(p.last_ok), c6 - c5 - 2), C.dim, bg)
       g_set(c6, ry, string.format("%d/%d", active, total), (active > 0 and C.ok or C.text), bg)
+    else
+      -- Заполняем пустоту
+      g_fill(2, ry, W - 2, 1, " ", C.text, C.bg)
     end
   end
 
   -- Панель статистики
   local STAT_Y = H - 5
   -- Разделитель над статистикой
-  g_set(1, STAT_Y, "╠" .. string.rep("═", W - 2) .. "╣", C.border, C.bg)
+  g_set(1, STAT_Y, "+" .. string.rep("=", W - 2) .. "+", C.border, C.bg)
   
   -- Боковые рамки для строк статистики
-  g_set(1, STAT_Y + 1, "║", C.border, C.bg)
-  g_set(W, STAT_Y + 1, "║", C.border, C.bg)
-  g_set(1, STAT_Y + 2, "║", C.border, C.bg)
-  g_set(W, STAT_Y + 2, "║", C.border, C.bg)
+  g_set(1, STAT_Y + 1, "|", C.border, C.bg)
+  g_set(W, STAT_Y + 1, "|", C.border, C.bg)
+  g_set(1, STAT_Y + 2, "|", C.border, C.bg)
+  g_set(W, STAT_Y + 2, "|", C.border, C.bg)
   
   -- Server Stats
   g_set(c2, STAT_Y + 1, "SERVER ", C.dim, C.bg)
@@ -272,7 +275,7 @@ function gui.drawPlanetList(planets, sel, scroll, stats)
 end
 
 function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
-  g_fill(1, 4, W, H-4, " ", C.text, C.bg)
+  -- Удален g_fill для предотвращения мерцания
 
   local st    = planet.status or "UNKNOWN"
   local scol  = STATUS_COLOR[st] or C.unknown
@@ -289,8 +292,8 @@ function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
   local c4 = math.floor(W * 0.55)
   
   -- Рисуем боковые рамки для строки заголовков
-  g_set(1, HY, "║", C.border, C.bg)
-  g_set(W, HY, "║", C.border, C.bg)
+  g_set(1, HY, "|", C.border, C.bg)
+  g_set(W, HY, "|", C.border, C.bg)
   
   g_set( c1, HY, "#",  C.dim, C.bg)
   g_set( c2, HY, "MACHINE",  C.dim, C.bg)
@@ -299,7 +302,7 @@ function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
   g_set(c4 + 1, HY, "TELEMETRY", C.title, C.bg)
 
   -- Разделитель на строке 5
-  g_set(1, 5, "╠" .. string.rep("═", W - 2) .. "╣", C.border, C.bg)
+  g_set(1, 5, "+" .. string.rep("=", W - 2) .. "+", C.border, C.bg)
 
   local LIST_Y = 6
   local LIST_H = H - LIST_Y - 2 -- 2 строки под подвал (separator + keys)
@@ -311,8 +314,8 @@ function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
     local ry  = LIST_Y + i
     
     -- Рисуем боковые рамки
-    g_set(1, ry, "║", C.border, C.bg)
-    g_set(W, ry, "║", C.border, C.bg)
+    g_set(1, ry, "|", C.border, C.bg)
+    g_set(W, ry, "|", C.border, C.bg)
     
     if idx <= #machines then
       local m = machines[idx]
@@ -326,16 +329,20 @@ function gui.drawPlanetDetail(planet, sel, scroll, sensor_data)
       g_set(c1, ry, string.format("%02d", idx), C.dim, bg)
       g_set(c2, ry, pad(m.name or "?", c3 - c2 - 2), fg, bg)
       g_set(c3, ry, mst, mcol, bg)
+    else
+      -- Заполняем пустоту
+      g_fill(2, ry, c4 - 3, 1, " ", C.text, C.bg)
     end
     g_set(c4 - 1, ry, "│", C.border, C.bg)
   end
 
-  if sensor_data then
-    for i = 1, LIST_H do
-      local line = sensor_data[i]
-      if line then
-        g_set(c4 + 1, LIST_Y + i - 1, pad(line:gsub("§.", ""), W - c4), C.text, C.bg)
-      end
+  -- Обновление телеметрии с очисткой старых строк
+  for i = 1, LIST_H do
+    local line = sensor_data and sensor_data[i]
+    if line then
+      g_set(c4 + 1, LIST_Y + i - 1, pad(line:gsub("§.", ""), W - c4), C.text, C.bg)
+    else
+      g_fill(c4 + 1, LIST_Y + i - 1, W - c4, 1, " ", C.text, C.bg)
     end
   end
 
